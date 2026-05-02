@@ -436,11 +436,11 @@ class EditStylingPanel(private val ctrl: ProjectController) :
         formAdjuster.updateProjectFontFamilies(projectFamilies)
     }
 
-    fun updatePictureLoaders(pictureLoaders: Collection<Picture.Loader>) {
+    fun updatePictureLoaders(pictureLoaders: Map<String, Picture.Loader>) {
         formAdjuster.updatePictureLoaders(pictureLoaders)
     }
 
-    fun updateTapes(tapes: Collection<Tape>) {
+    fun updateTapes(tapes: Map<String, Tape>) {
         formAdjuster.updateTapes(tapes)
     }
 

@@ -1,5 +1,7 @@
 package com.loadingbyte.cinecred.ui.styling
 
+import com.loadingbyte.cinecred.common.caseInsensitiveCollator
+import com.loadingbyte.cinecred.common.sortedWithCollator
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
@@ -60,12 +62,15 @@ class StyleFormAdjuster(
             form.setProjectFontFamilies(projectFamilies)
     }
 
-    fun updatePictureLoaders(pictureLoaders: Collection<Picture.Loader>) {
-        updateExternalChoices(PictureRef::class.java, pictureLoaders.map(::PictureRef))
+    fun updatePictureLoaders(pictureLoaders: Map<String, Picture.Loader>) {
+        val choices =
+            pictureLoaders.entries.sortedWithCollator(caseInsensitiveCollator()) { it.key }.map { PictureRef(it.value) }
+        updateExternalChoices(PictureRef::class.java, choices)
     }
 
-    fun updateTapes(tapes: Collection<Tape>) {
-        updateExternalChoices(TapeRef::class.java, tapes.map(::TapeRef))
+    fun updateTapes(tapes: Map<String, Tape>) {
+        val choices = tapes.entries.sortedWithCollator(caseInsensitiveCollator()) { it.key }.map { TapeRef(it.value) }
+        updateExternalChoices(TapeRef::class.java, choices)
     }
 
     private fun <V : Any> updateExternalChoices(settingType: Class<V>, choices: List<V>) {
@@ -147,7 +152,8 @@ class StyleFormAdjuster(
                     curForm.setFontAxes(setting, availableAxes)
             }
             is FontFeatureConstr -> {
-                val availableTags = constr.getAvailableTags(styling, curStyle).toList()
+                val availableTags =
+                    constr.getAvailableTags(styling, curStyle).sortedWithCollator(caseInsensitiveCollator())
                 for (setting in constr.settings)
                     curForm.setChoices(setting, availableTags, unique = true)
             }

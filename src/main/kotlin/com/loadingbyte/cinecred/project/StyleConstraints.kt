@@ -268,8 +268,8 @@ private val LETTER_STYLE_CONSTRAINTS: List<StyleConstraint<LetterStyle, *>> = li
     },
     DoubleConstr(ERROR, LetterStyle::superscriptScaling.st(), min = 0.0, minInclusive = false),
     FontFeatureConstr(WARN, LetterStyle::features.st()) { _, style ->
-        val font = style.font.font ?: return@FontFeatureConstr Collections.emptySortedSet()
-        TreeSet(font.supportedFeatures).apply { removeAll(MANAGED_FEATURES) }
+        val font = style.font.font ?: return@FontFeatureConstr Collections.emptySet()
+        HashSet(font.supportedFeatures).apply { removeAll(MANAGED_FEATURES) }
     },
     StyleNameConstr(
         WARN, LetterStyle::inheritLayersFromStyle.st(),
@@ -591,7 +591,7 @@ class FontVariationsConstr<S : Style>(
 class FontFeatureConstr<S : Style>(
     val severity: Severity,
     setting: StyleSetting<S, FontFeature>,
-    val getAvailableTags: (Styling, S) -> SequencedSet<String>
+    val getAvailableTags: (Styling, S) -> Set<String>
 ) : StyleConstraint<S, StyleSetting<S, FontFeature>>(setting)
 
 

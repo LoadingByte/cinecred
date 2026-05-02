@@ -32,7 +32,6 @@ import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.io.IOException
 import java.nio.file.Path
-import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JOptionPane
 import javax.swing.RootPaneContainer
@@ -68,9 +67,9 @@ class ProjectController(
     private data class Input(
         val creditsWorkbooks: List<ProjectIntake.CreditsWorkbook>,
         val ioLog: List<ParserMsg>,
-        val projectFonts: SortedMap<String, Font>?,
-        val pictureLoaders: SortedMap<String, Picture.Loader>?,
-        val tapes: SortedMap<String, Tape>?,
+        val projectFonts: Map<String, Font>?,
+        val pictureLoaders: Map<String, Picture.Loader>?,
+        val tapes: Map<String, Tape>?,
         val styling: Styling?
     )
 
@@ -136,26 +135,27 @@ class ProjectController(
     private val projectIntake = ProjectIntake(projectDir, object : ProjectIntake.Callbacks {
 
         override fun pushCreditsWorkbooks(
-            creditsWorkbooks: List<ProjectIntake.CreditsWorkbook>, log: List<ParserMsg>, pollable: Boolean
+            creditsWorkbooks: Collection<ProjectIntake.CreditsWorkbook>, log: List<ParserMsg>, pollable: Boolean
         ) {
+            val creditsWorkbooks = creditsWorkbooks.sortedWithCollator(caseInsensitiveCollator()) { it.fileName }
             process(currentInput.updateAndGet { it.copy(creditsWorkbooks = creditsWorkbooks, ioLog = log) })
             SwingUtilities.invokeLater { toolbarCtrl.setCreditsPollable(pollable) }
         }
 
-        override fun pushProjectFonts(projectFonts: SortedMap<String, Font>) {
+        override fun pushProjectFonts(projectFonts: Map<String, Font>) {
             val projectFamilies = FontFamilies(projectFonts.values)
             process(currentInput.updateAndGet { it.copy(projectFonts = projectFonts) })
             SwingUtilities.invokeLater { stylingDockable.updateProjectFontFamilies(projectFamilies) }
         }
 
-        override fun pushPictureLoaders(pictureLoaders: SortedMap<String, Picture.Loader>) {
+        override fun pushPictureLoaders(pictureLoaders: Map<String, Picture.Loader>) {
             process(currentInput.updateAndGet { it.copy(pictureLoaders = pictureLoaders) })
-            SwingUtilities.invokeLater { stylingDockable.updatePictureLoaders(pictureLoaders.values) }
+            SwingUtilities.invokeLater { stylingDockable.updatePictureLoaders(pictureLoaders) }
         }
 
-        override fun pushTapes(tapes: SortedMap<String, Tape>) {
+        override fun pushTapes(tapes: Map<String, Tape>) {
             process(currentInput.updateAndGet { it.copy(tapes = tapes) })
-            SwingUtilities.invokeLater { stylingDockable.updateTapes(tapes.values) }
+            SwingUtilities.invokeLater { stylingDockable.updateTapes(tapes) }
         }
 
     })

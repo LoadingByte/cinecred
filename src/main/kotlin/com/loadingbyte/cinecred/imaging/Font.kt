@@ -37,7 +37,7 @@ class Font private constructor(private val hbFace: MemorySegment) {
     val sampleTextMap: Map<Locale, String>
 
     val axes: List<Axis>
-    val supportedFeatures: SortedSet<String>
+    val supportedFeatures: Set<String>
 
     init {
         CLEANER.register(this, FontCleanerAction(hbFace))
@@ -103,7 +103,7 @@ class Font private constructor(private val hbFace: MemorySegment) {
         }
 
         // Fill the supported features set.
-        val supportedFeatures = TreeSet<String>()
+        supportedFeatures = HashSet()
         Arena.ofConfined().use { arena ->
             for (tableTag in intArrayOf(HB_OT_TAG_GSUB(), HB_OT_TAG_GPOS())) {
                 val count = hb_ot_layout_table_get_feature_tags(hbFace, tableTag, 0, NULL, NULL)
@@ -116,7 +116,6 @@ class Font private constructor(private val hbFace: MemorySegment) {
                     supportedFeatures += code2tag(cTags.getAtIndex(JAVA_INT, idx))
             }
         }
-        this.supportedFeatures = Collections.unmodifiableSortedSet(supportedFeatures)
     }
 
     private fun lookupName(nameId: Int, language: MemorySegment): String {

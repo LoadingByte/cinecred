@@ -23,6 +23,7 @@ import java.lang.Thread.sleep
 import java.net.URI
 import javax.swing.JFrame
 import javax.swing.UIManager
+import kotlin.io.path.name
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlinx.collections.immutable.persistentListOf as pl
@@ -294,8 +295,8 @@ private fun <S : Style> renderStyleSettings(
         }
     )
     formAdjuster.activeForm = form
-    formAdjuster.updatePictureLoaders(pictureLoaders)
-    formAdjuster.updateTapes(tapes)
+    formAdjuster.updatePictureLoaders(pictureLoaders.associateBy { it.file.name })
+    formAdjuster.updateTapes(tapes.associateBy { it.fileOrDir.name })
     sleep(500)
     edt { KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner() }
 

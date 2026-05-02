@@ -107,9 +107,8 @@ abstract class FontSorter<Font, Family> {
 
 
     fun sort(fonts: Iterable<Font>): List<Family> {
-        // We use a tree map so that the families will be sorted by name, and tree sets as values so that the fonts of
-        // a family will be sorted by weight, width, and slope (WWS).
-        val rootFamilyToRichFonts = TreeMap<String, TreeSet<RichFont>>()
+        // We use tree sets as values so that the fonts of a family will be sorted by weight, width, and slope (WWS).
+        val rootFamilyToRichFonts = HashMap<String, TreeSet<RichFont>>()
         val richFontComparator = Comparator
             .comparingDouble(FontSorter<Font, Family>.RichFont::width)
             .thenComparingDouble(FontSorter<Font, Family>.RichFont::weight)

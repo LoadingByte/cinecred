@@ -17,9 +17,7 @@ import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.SheetsRequest
 import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.*
-import com.loadingbyte.cinecred.common.LOGGER
-import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.useResourceStream
+import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.projectio.Spreadsheet
 import com.loadingbyte.cinecred.projectio.SpreadsheetLook
 import com.loadingbyte.cinecred.ui.helper.tryBrowse
@@ -77,7 +75,8 @@ object GoogleService : Service {
         // we ensure that we don't create an empty data store on the disk, which is important as some users have
         // reported strange file permissions issues with the data store even if they never used the Google service.
         if (credDir.notExists()) persistentListOf() else try {
-            credentialDataStore.keySet().sorted().map(::GoogleAccount).toPersistentList()
+            credentialDataStore.keySet().sortedWithCollator(caseInsensitiveCollator()).map(::GoogleAccount)
+                .toPersistentList()
         } catch (_: IOException) {
             // Don't throw now as that would inhibit Cinecred's launch. And even though keySet() claims to throw, it
             // in fact does not, so any exception would already have been logged by the credentialDataStore getter.

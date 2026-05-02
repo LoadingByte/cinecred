@@ -1528,7 +1528,7 @@ class FontChooserWidget(
         // is no longer available, we do not want any notifications to trigger.
         withoutChangeListeners {
             val selected = value
-            val families = projectFamilies.list + BUNDLED_FAMILIES.list + SYSTEM_FAMILIES.list
+            val families = sorted(projectFamilies) + sorted(BUNDLED_FAMILIES) + sorted(SYSTEM_FAMILIES)
             // It is important that the family combo box initially has no selection, so that the value setter we call
             // one line later always triggers the family combo box's selection listener (even if when the value setter
             // sets the first family as selected!) and hence correctly populates the font combo box.
@@ -1538,6 +1538,9 @@ class FontChooserWidget(
             value = selected
         }
     }
+
+    private fun sorted(fontFamilies: FontFamilies) =
+        fontFamilies.list.sortedWithCollator(caseInsensitiveCollator()) { it.getFamily(Locale.getDefault()) }
 
     private fun getFamilyOf(font: Font) =
         projectFamilies.getFamily(font) ?: BUNDLED_FAMILIES.getFamily(font) ?: SYSTEM_FAMILIES.getFamily(font)

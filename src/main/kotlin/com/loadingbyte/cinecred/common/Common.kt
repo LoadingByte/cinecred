@@ -387,10 +387,14 @@ fun caseInsensitiveCollator(locale: Locale = Locale.getDefault()): Collator = Co
     decomposition = Collator.FULL_DECOMPOSITION
 }
 
-inline fun <E> List<E>.sortedWithCollator(collator: Collator, selector: (E) -> String): List<E> =
+fun Iterable<String>.sortedWithCollator(collator: Collator, ascending: Boolean = true): List<String> =
+    sortedWithCollator(collator, ascending) { it }
+
+inline fun <E> Iterable<E>.sortedWithCollator(collator: Collator, selector: (E) -> String): List<E> =
     sortedWithCollator(collator, true, selector)
 
-inline fun <E> List<E>.sortedWithCollator(collator: Collator, ascending: Boolean, selector: (E) -> String): List<E> {
+inline fun <E> Iterable<E>.sortedWithCollator(collator: Collator, ascending: Boolean, selector: (E) -> String):
+        List<E> {
     val helper = mapTo(mutableListOf()) { elem -> Pair(elem, collator.getCollationKey(selector(elem))) }
     if (ascending) helper.sortBy { it.second } else helper.sortByDescending { it.second }
     return helper.map { it.first }

@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.ui
 
+import com.loadingbyte.cinecred.common.ROOT_CASE_INSENSITIVE_COLLATOR
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.drawer.*
@@ -140,7 +141,7 @@ class LinesOverlay(
     }
 
     override fun compareTo(other: Overlay) = when (other) {
-        is LinesOverlay -> name.compareTo(other.name)
+        is LinesOverlay -> ROOT_CASE_INSENSITIVE_COLLATOR.compare(name, other.name)
         else -> Overlay.TYPES.indexOf(javaClass).compareTo(Overlay.TYPES.indexOf(other.javaClass))
     }
 
@@ -166,7 +167,7 @@ class ImageOverlay(
     }
 
     override fun compareTo(other: Overlay) = when (other) {
-        is ImageOverlay -> name.compareTo(other.name)
+        is ImageOverlay -> ROOT_CASE_INSENSITIVE_COLLATOR.compare(name, other.name)
         else -> Overlay.TYPES.indexOf(javaClass).compareTo(Overlay.TYPES.indexOf(other.javaClass))
     }
 

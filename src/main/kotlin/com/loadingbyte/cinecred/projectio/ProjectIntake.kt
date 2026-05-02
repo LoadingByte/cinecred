@@ -16,7 +16,6 @@ import java.io.IOException
 import java.net.URI
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
-import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -38,10 +37,10 @@ import kotlin.io.path.*
 class ProjectIntake(private val projectDir: Path, private val callbacks: Callbacks) {
 
     interface Callbacks {
-        fun pushCreditsWorkbooks(creditsWorkbooks: List<CreditsWorkbook>, log: List<ParserMsg>, pollable: Boolean)
-        fun pushProjectFonts(projectFonts: SortedMap<String, Font>)
-        fun pushPictureLoaders(pictureLoaders: SortedMap<String, Picture.Loader>)
-        fun pushTapes(tapes: SortedMap<String, Tape>)
+        fun pushCreditsWorkbooks(creditsWorkbooks: Collection<CreditsWorkbook>, log: List<ParserMsg>, pollable: Boolean)
+        fun pushProjectFonts(projectFonts: Map<String, Font>)
+        fun pushPictureLoaders(pictureLoaders: Map<String, Picture.Loader>)
+        fun pushTapes(tapes: Map<String, Tape>)
     }
 
     class CreditsWorkbook(val fileName: String, val uri: URI, spreadsheets: List<Spreadsheet>) {
@@ -231,11 +230,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
             log += ParserMsg(null, null, null, null, null, ERROR, msg)
         }
 
-        callbacks.pushCreditsWorkbooks(
-            creditsWorkbooks = creditsWorkbooks.sortedBy(CreditsWorkbook::fileName),
-            log = log,
-            pollable = linkedCreditsWatchers.isNotEmpty()
-        )
+        callbacks.pushCreditsWorkbooks(creditsWorkbooks, log, pollable = linkedCreditsWatchers.isNotEmpty())
     }
 
     private fun reloadAuxFileOrDir(fileOrDir: Path) {
@@ -295,7 +290,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
 
     private fun pushAuxiliaryFileChanges() {
         if (projectFontsChanged)
-            callbacks.pushProjectFonts(buildDedupSortedMap { put ->
+            callbacks.pushProjectFonts(buildDedupMap { put ->
                 for (fonts in projectFonts.values)
                     for (font in fonts)
                         put(font.name, font)
@@ -307,7 +302,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                 if (tape.fileSeq && (tape.availableRange.run { endExclusive - start } as Timecode.Frames).frames > 10)
                     tape.fileOrDir else null
             }
-            callbacks.pushPictureLoaders(buildDedupSortedMap { put ->
+            callbacks.pushPictureLoaders(buildDedupMap { put ->
                 pictureLoaders.forEachValue(exclude) { pictureLoader ->
                     put(pictureLoader.file.name, pictureLoader)
                 }
@@ -315,7 +310,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         }
 
         if (tapesChanged)
-            callbacks.pushTapes(buildDedupSortedMap { put ->
+            callbacks.pushTapes(buildDedupMap { put ->
                 for (tape in tapes.values)
                     put(tape.fileOrDir.name, tape)
             })
@@ -325,8 +320,8 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         tapesChanged = false
     }
 
-    private fun <V : Any> buildDedupSortedMap(builderAction: ((String, V) -> Unit) -> Unit): SortedMap<String, V> {
-        val map = TreeMap<String, V>()
+    private fun <V : Any> buildDedupMap(builderAction: ((String, V) -> Unit) -> Unit): Map<String, V> {
+        val map = HashMap<String, V>()
         val dupKeys = HashSet<String>()
         builderAction { key, value ->
             if (key !in dupKeys && map.put(key, value) != null) {

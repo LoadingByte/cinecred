@@ -18,6 +18,7 @@ import com.loadingbyte.cinecred.project.VTextFragment.*
 import java.awt.geom.Point2D
 import java.awt.geom.Rectangle2D
 import java.util.*
+import kotlin.jvm.optionals.getOrNull
 import kotlin.math.max
 import kotlin.math.min
 
@@ -601,7 +602,7 @@ private fun drawBodyImageWithParagraphsBodyLayout(
             val x = justify(hJustify, bodyImageWidth, bodyElemWidth)
             when (bodyElem) {
                 is BodyElement.Nil -> {}
-                is BodyElement.Pic -> bodyElem.sty.toEmbedded()?.also { bodyImage.drawEmbeddedPicture(it, x, y) }
+                is BodyElement.Pic -> bodyElem.sty.toEmbedded(styling)?.also { bodyImage.drawEmbeddedPicture(it, x, y) }
                 is BodyElement.Tap -> bodyElem.sty.toEmbedded(styling)?.also { bodyImage.drawEmbeddedTape(it, x, y) }
                 is BodyElement.Mis -> null
             } ?: bodyImage.drawMissing(x, y)
@@ -714,7 +715,7 @@ private inline fun <T> harmonizeExtent(
 private fun BodyElement.getWidth(styling: Styling): Double = when (this) {
     is BodyElement.Nil -> 0.0
     is BodyElement.Str -> lines.maxOf { str -> str.formatted(styling).width }
-    is BodyElement.Pic -> sty.toEmbedded()?.width ?: MISSING_RECT.width
+    is BodyElement.Pic -> sty.toEmbedded(styling)?.width ?: MISSING_RECT.width
     is BodyElement.Tap -> sty.toEmbedded(styling)?.run { resolution.widthPx.toDouble() } ?: MISSING_RECT.width
     is BodyElement.Mis -> MISSING_RECT.width
 }
@@ -722,7 +723,7 @@ private fun BodyElement.getWidth(styling: Styling): Double = when (this) {
 private fun BodyElement.getHeight(styling: Styling): Double = when (this) {
     is BodyElement.Nil -> sty.heightPx
     is BodyElement.Str -> lines.sumOf { str -> str.formatted(styling).height }
-    is BodyElement.Pic -> sty.toEmbedded()?.height ?: MISSING_RECT.height
+    is BodyElement.Pic -> sty.toEmbedded(styling)?.height ?: MISSING_RECT.height
     is BodyElement.Tap -> sty.toEmbedded(styling)?.run { resolution.heightPx.toDouble() } ?: MISSING_RECT.height
     is BodyElement.Mis -> MISSING_RECT.height
 }
@@ -892,7 +893,8 @@ private class RowGauge(
                 val width = bodyElem.getWidth(styling)
                 val x = cellX + justify(hJustify, cellWidth, width)
                 when (bodyElem) {
-                    is BodyElement.Pic -> bodyElem.sty.toEmbedded()?.also { defImage.drawEmbeddedPicture(it, x, y) }
+                    is BodyElement.Pic ->
+                        bodyElem.sty.toEmbedded(styling)?.also { defImage.drawEmbeddedPicture(it, x, y) }
                     is BodyElement.Tap -> bodyElem.sty.toEmbedded(styling)?.also { defImage.drawEmbeddedTape(it, x, y) }
                     is BodyElement.Mis -> null
                 } ?: defImage.drawMissing(x, y)
@@ -952,9 +954,14 @@ private fun HJustifyCrumbsStack.toHJustifyCrumbs(last: Boolean): HJustifyCrumbs 
 }
 
 
-private fun PictureStyle.toEmbedded(): DeferredImage.EmbeddedPicture? {
+private val embeddedPictureCache = EmbeddedCache<PictureStyle, DeferredImage.EmbeddedPicture>()
+
+private fun PictureStyle.toEmbedded(styling: Styling): DeferredImage.EmbeddedPicture? =
+    embeddedPictureCache.get(styling, this, ::createEmbedded)
+
+private fun PictureStyle.createEmbedded(): DeferredImage.EmbeddedPicture? {
     val picture = try {
-        (this@toEmbedded.picture.loader ?: return null).picture
+        (picture.loader ?: return null).picture
     } catch (_: IllegalStateException) {
         return null
     }
@@ -971,7 +978,12 @@ private fun PictureStyle.toEmbedded(): DeferredImage.EmbeddedPicture? {
 }
 
 
-private fun TapeStyle.toEmbedded(styling: Styling): DeferredImage.EmbeddedTape? {
+private val embeddedTapeCache = EmbeddedCache<TapeStyle, DeferredImage.EmbeddedTape>()
+
+private fun TapeStyle.toEmbedded(styling: Styling): DeferredImage.EmbeddedTape? =
+    embeddedTapeCache.get(styling, this) { createEmbedded(styling) }
+
+private fun TapeStyle.createEmbedded(styling: Styling): DeferredImage.EmbeddedTape? {
     val tap = tape.tape ?: return null
     val rng: OpenEndRange<Timecode>
     try {
@@ -1043,6 +1055,23 @@ private fun coerceTimecode(optTc: Opt<Timecode>, tape: Tape, styling: Styling): 
                 null
             }
     }
+}
+
+
+private class EmbeddedCache<S : Style, E : Any> {
+
+    // Note that usually, only one Styling is in use at any given time.
+    @Volatile private var current: Pair<Styling, MutableMap<S, Optional<E>>>? = null
+
+    fun get(styling: Styling, style: S, create: () -> E?): E? {
+        var map = current?.let { (s, m) -> if (s === styling) m else null }
+        if (map == null) {
+            map = Collections.synchronizedMap(IdentityHashMap())
+            current = Pair(styling, map)
+        }
+        return map.computeIfAbsent(style) { Optional.ofNullable(create()) }.getOrNull()
+    }
+
 }
 
 

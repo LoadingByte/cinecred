@@ -361,6 +361,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
         val width: Double
         val height: Double
+        val widthBeforeRotation: Double
+        val heightBeforeRotation: Double
         val transform: AffineTransform get() = AffineTransform(field)
         val crop: Rectangle2D get() = field.clone() as Rectangle2D
         val isCropped: Boolean
@@ -384,6 +386,8 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             val w = width ?: roundIfRaster(blankCrop.width * if (height != null) height / blankCrop.height else 1.0)
             val h = height ?: roundIfRaster(blankCrop.height * if (width != null) width / blankCrop.width else 1.0)
             require(w > 0.0 && h > 0.0)
+            widthBeforeRotation = w
+            heightBeforeRotation = h
 
             val rotTransform = when {
                 abs(rotation) % 360.0 !in 0.1..360.0 - 0.1 -> null

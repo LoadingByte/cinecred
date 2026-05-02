@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.ui.styling
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.TimecodeFormat
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.*
 import com.loadingbyte.cinecred.ui.styling.ToggleButtonGroupWidgetSpec.Show.*
@@ -385,18 +386,10 @@ private val PICTURE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PictureStyle, *>> =
         unionName = "resolution", unionUnit = "px", settingIcons = listOf(SIZE_WIDTH_ICON, SIZE_HEIGHT_ICON)
     ),
     ZeroInitWidgetSpec(PictureStyle::widthPx.st()) { style ->
-        try {
-            style.picture.loader?.run { picture.width - style.cropLeftPx - style.cropRightPx }
-        } catch (_: IllegalStateException) {
-            null
-        }
+        basicEmbeddedPic(style, null, if (style.heightPx.isActive) style.heightPx.value else null)?.widthBeforeRotation
     },
     ZeroInitWidgetSpec(PictureStyle::heightPx.st()) { style ->
-        try {
-            style.picture.loader?.run { picture.height - style.cropTopPx - style.cropBottomPx }
-        } catch (_: IllegalStateException) {
-            null
-        }
+        basicEmbeddedPic(style, if (style.widthPx.isActive) style.widthPx.value else null, null)?.heightBeforeRotation
     },
     WidthWidgetSpec(PictureStyle::cropLeftPx.st(), WidthSpec.TINY),
     WidthWidgetSpec(PictureStyle::cropRightPx.st(), WidthSpec.TINY),
@@ -415,6 +408,19 @@ private val PICTURE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PictureStyle, *>> =
     UnitWidgetSpec(PictureStyle::rotationDeg.st(), unit = "°")
 )
 
+private fun basicEmbeddedPic(style: PictureStyle, width: Double?, height: Double?) =
+    try {
+        style.picture.loader?.picture?.let { picture ->
+            DeferredImage.EmbeddedPicture(
+                picture, width, height,
+                style.cropLeftPx, style.cropRightPx, style.cropTopPx, style.cropBottomPx, style.cropBlankSpace
+            )
+        }
+    } catch (_: RuntimeException) {
+        // Catches IllegalStateException and IllegalArgumentException.
+        null
+    }
+
 
 private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listOf(
     WidthWidgetSpec(TapeStyle::widthPx.st(), WidthSpec.LITTLE),
@@ -424,18 +430,12 @@ private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listO
         unionName = "resolution", unionUnit = "px", settingIcons = listOf(SIZE_WIDTH_ICON, SIZE_HEIGHT_ICON)
     ),
     ZeroInitWidgetSpec(TapeStyle::widthPx.st()) { style ->
-        try {
-            style.tape.tape?.run { spec.resolution.widthPx - style.cropLeftPx - style.cropRightPx }
-        } catch (_: IllegalStateException) {
-            null
-        }
+        basicEmbeddedTape(style, null, if (style.heightPx.isActive) style.heightPx.value else null)
+            ?.resolutionBeforeRotation?.widthPx
     },
     ZeroInitWidgetSpec(TapeStyle::heightPx.st()) { style ->
-        try {
-            style.tape.tape?.run { spec.resolution.heightPx - style.cropTopPx - style.cropBottomPx }
-        } catch (_: IllegalStateException) {
-            null
-        }
+        basicEmbeddedTape(style, if (style.widthPx.isActive) style.widthPx.value else null, null)
+            ?.resolutionBeforeRotation?.heightPx
     },
     WidthWidgetSpec(TapeStyle::cropLeftPx.st(), WidthSpec.TINY),
     WidthWidgetSpec(TapeStyle::cropRightPx.st(), WidthSpec.TINY),
@@ -473,6 +473,19 @@ private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listO
         unionName = "fadeOut", settingIcons = listOf(null, TRANSITION_ICON)
     )
 )
+
+private fun basicEmbeddedTape(style: TapeStyle, width: Int?, height: Int?) =
+    try {
+        style.tape.tape?.let { tape ->
+            DeferredImage.EmbeddedTape(
+                tape, width, height,
+                style.cropLeftPx, style.cropRightPx, style.cropTopPx, style.cropBottomPx
+            )
+        }
+    } catch (_: RuntimeException) {
+        // Catches IllegalStateException and IllegalArgumentException.
+        null
+    }
 
 
 sealed class StyleWidgetSpec<S : Style, SS : StyleSetting<S, *>>(

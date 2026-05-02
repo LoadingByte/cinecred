@@ -960,7 +960,6 @@ private fun PictureStyle.toEmbedded(): DeferredImage.EmbeddedPicture? {
     }
     val width = if (widthPx.isActive) widthPx.value else null
     val height = if (heightPx.isActive) heightPx.value else null
-    val cropBlankSpace = if (picture is Picture.Vector) cropBlankSpace else false
     return try {
         DeferredImage.EmbeddedPicture(
             picture, width, height, cropLeftPx, cropRightPx, cropTopPx, cropBottomPx, cropBlankSpace,

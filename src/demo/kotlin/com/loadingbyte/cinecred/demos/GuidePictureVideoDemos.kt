@@ -216,7 +216,7 @@ object GuidePictureVideoPictureCropBlankSpaceDemo : StyleSettingsDemo<PictureSty
     listOf(PictureStyle::cropBlankSpace.st()), pageGuides = true
 ) {
     override fun styles() = buildList<PictureStyle> {
-        this += PIC_STYLE.copy(widthPx = Opt(true, 150.0))
+        this += PIC_STYLE.copy(widthPx = Opt(true, 128.0), rotationDeg = 25.0)
         this += last().copy(cropBlankSpace = true)
     }
 

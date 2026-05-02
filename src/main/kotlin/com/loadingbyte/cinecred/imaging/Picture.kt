@@ -10,8 +10,7 @@ import org.apache.pdfbox.multipdf.LayerUtility
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject
 import org.apache.pdfbox.pdmodel.graphics.form.PDTransparencyGroupAttributes
-import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_GBRAPF32
-import org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_GBRPF32
+import org.bytedeco.ffmpeg.global.avutil.*
 import org.slf4j.LoggerFactory
 import org.w3c.dom.Attr
 import org.w3c.dom.Document
@@ -28,6 +27,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.StringWriter
 import java.nio.file.Path
+import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import javax.imageio.ImageIO
 import javax.swing.FocusManager
@@ -40,8 +40,10 @@ import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 import kotlin.concurrent.withLock
 import kotlin.io.path.*
+import kotlin.jvm.optionals.getOrElse
 import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 
@@ -56,6 +58,9 @@ sealed interface Picture : AutoCloseable {
     fun prepareAsBitmap(
         canvas: Canvas, crop: Rectangle2D?, transform: AffineTransform?, cached: Canvas.PreparedBitmap?
     ): Canvas.PreparedBitmap?
+
+    /** A null return value means that the picture is fully blank. */
+    fun nonBlankBounds(crop: Rectangle2D? = null, transform: AffineTransform? = null): Rectangle2D?
 
 
     class Raster private constructor(
@@ -81,7 +86,8 @@ sealed interface Picture : AutoCloseable {
         override fun prepareAsBitmap(
             canvas: Canvas, crop: Rectangle2D?, transform: AffineTransform?, cached: Canvas.PreparedBitmap?
         ) = bitmap.ifNotClosed {
-            val crop = crop?.run { Rectangle(x.roundToInt(), y.roundToInt(), width.roundToInt(), height.roundToInt()) }
+            val crop = (crop as? Rectangle)
+                ?: crop?.run { Rectangle(x.roundToInt(), y.roundToInt(), width.roundToInt(), height.roundToInt()) }
             canvas.prepareBitmap(bitmap, crop = crop, transform = transform, cached = cached)
         }
 
@@ -91,6 +97,23 @@ sealed interface Picture : AutoCloseable {
             } catch (_: IllegalStateException) {
                 // If the bitmap is used right now, let the GC collect and close it later.
             }
+        }
+
+        private val nonBlankBoundaryPointsCache =
+            Collections.synchronizedMap(object : LinkedHashMap<Rectangle, DoubleArray>(64, 0.75f, true) {
+                override fun removeEldestEntry(eldest: Map.Entry<Rectangle, DoubleArray>) = size > 64
+            })
+
+        override fun nonBlankBounds(crop: Rectangle2D?, transform: AffineTransform?): Rectangle2D? {
+            val crop = (crop as? Rectangle)
+                ?: crop?.run { Rectangle(x.roundToInt(), y.roundToInt(), width.roundToInt(), height.roundToInt()) }
+                ?: bitmap.spec.resolution.run { Rectangle(0, 0, widthPx, heightPx) }
+
+            if (!bitmap.spec.representation.pixelFormat.hasAlpha)
+                return Rectangle(crop.width, crop.height).transformedBy(transform).bounds
+
+            val boundaryPoints = nonBlankBoundaryPointsCache.computeIfAbsent(crop) { findBoundaryPoints(bitmap, crop) }
+            return findNonBlankBounds(boundaryPoints, transform)
         }
 
         companion object {
@@ -127,64 +150,46 @@ sealed interface Picture : AutoCloseable {
 
     sealed class Vector : Picture {
 
-        val cropX: Double get() = minBox.x
-        val cropY: Double get() = minBox.y
-        val cropWidth: Double get() = minBox.width
-        val cropHeight: Double get() = minBox.height
-
-        private val minBox: Rectangle2D by lazy {
-            val origBox = Rectangle2D.Double(0.0, 0.0, width, height)
-            val minBox = empiricallyFindMinBox(origBox)
-            // If the reduction is severe, do a second pass to better identify the exact boundaries.
-            if (minBox.width >= 0.5 * origBox.width && minBox.height >= 0.5 * origBox.height) minBox else
-                empiricallyFindMinBox(minBox.apply { x -= 2.0; y -= 2.0; width += 4.0; height += 4.0 })
+        @Volatile private var roughNonBlankBounds: Optional<Rectangle2D>? = null
+        private val nonBlankBoundaryPointsCache = object : LinkedHashMap<Rectangle2D, DoubleArray>(64, 0.75f, true) {
+            override fun removeEldestEntry(eldest: Map.Entry<Rectangle2D, DoubleArray>) = size > 64
         }
 
-        // This method finds the minimal bounding box by just rendering the picture and looking at the pixels.
-        private fun empiricallyFindMinBox(curBox: Rectangle2D.Double): Rectangle2D.Double {
-            if (curBox.width < 0.001 || curBox.height < 0.001)
-                return curBox
-            val s = 1000.0 / max(curBox.width, curBox.height)
-            val res = Resolution(ceil(curBox.width * s).toInt(), ceil(curBox.height * s).toInt())
+        override fun nonBlankBounds(crop: Rectangle2D?, transform: AffineTransform?): Rectangle2D? {
+            if (roughNonBlankBounds == null) {
+                val s = 1000.0 / max(width, height)
+                roughNonBlankBounds = render(s, Rectangle2D.Double(0.0, 0.0, width, height))
+                    ?.use { bitmap -> findNonBlankBounds(findBoundaryPoints(bitmap)) }
+                    ?.apply { setRect((x - 2) / s, (y - 2) / s, (width + 4) / s, (height + 4) / s) }
+                    .let(Optional<*>::ofNullable)
+            }
+            val roughNonBlankBounds = roughNonBlankBounds!!.getOrElse { return null }
+
+            val crop = crop ?: Rectangle2D.Double(0.0, 0.0, width, height)
+            val renderCrop = crop.createIntersection(roughNonBlankBounds)
+            val renderScaling = 1000.0 / max(renderCrop.width, renderCrop.height)
+
+            // Note: This cache exactly matches float-based rectangles, but float inaccuracy is not a problem since the
+            // crop directly stems from user configuration without any intermediate computational steps.
+            val boundaryPoints = nonBlankBoundaryPointsCache.computeIfAbsent(crop) {
+                render(renderScaling, renderCrop)?.use(::findBoundaryPoints) ?: DoubleArray(0)
+            }
+            return findNonBlankBounds(boundaryPoints, (transform?.let(::AffineTransform) ?: AffineTransform()).apply {
+                translate(renderCrop.x - crop.x, renderCrop.y - crop.y)
+                scale(1 / renderScaling)
+            })
+        }
+
+        private fun render(scaling: Double, crop: Rectangle2D): Bitmap? {
+            val res = Resolution(ceil(crop.width * scaling).toInt(), ceil(crop.height * scaling).toInt())
             if (res.widthPx <= 0 || res.heightPx <= 0)
-                return curBox
+                return null
             // The sRGB color space is correct for SVGs and a good guess for most PDFs.
             val rep = Canvas.compatibleRepresentation(ColorSpace.SRGB)
-            val tr = AffineTransform.getScaleInstance(s, s).apply { translate(-curBox.x, -curBox.y) }
-            val px = Bitmap.allocate(Bitmap.Spec(res, rep)).use { bitmap ->
-                Canvas.forBitmap(bitmap.zero()).use { canvas -> drawTo(canvas, transform = tr) }
-                bitmap.getF(res.widthPx * 4)
-            }
-            val minX = locateBoundary(px, 0, res.widthPx, 1, res.heightPx, 1, res.widthPx, true)
-            // All pixels are transparent, so just abort.
-            if (minX.isNaN())
-                return curBox
-            val minY = locateBoundary(px, 0, res.heightPx, 1, res.widthPx, res.widthPx, 1, true)
-            val maxX = locateBoundary(px, res.widthPx - 1, -1, -1, res.heightPx, 1, res.widthPx, false)
-            val maxY = locateBoundary(px, res.heightPx - 1, -1, -1, res.widthPx, res.widthPx, 1, false)
-            return Rectangle2D.Double(curBox.x + minX / s, curBox.y + minY / s, (maxX - minX) / s, (maxY - minY) / s)
-        }
-
-        private fun locateBoundary(
-            px: FloatArray, uStart: Int, uEnd: Int, uStep: Int, vEnd: Int, uStride: Int, vStride: Int, invAlpha: Boolean
-        ): Double {
-            var u = uStart
-            while (u != uEnd) {
-                var alpha = 0f
-                var i = u * uStride * 4 + 3
-                for (v in 0..<vEnd) {
-                    alpha = max(alpha, px[i])
-                    i += vStride * 4
-                }
-                // We look at the outermost pixel with non-zero alpha, and then place the boundary at a point inside
-                // that pixel that depends on the pixel's alpha. In other words, we exploit the antialiasing to locate
-                // the boundary at sub-pixel accuracy. Of course, this will give ever so slightly wrong results if the
-                // drawn object is partially transparent, but the deviation is only a fraction of a pixel, so it's fine.
-                if (alpha != 0f)
-                    return u + if (invAlpha) 1.0 - alpha else alpha.toDouble()
-                u += uStep
-            }
-            return Double.NaN
+            val tr = AffineTransform.getScaleInstance(scaling, scaling).apply { translate(-crop.x, -crop.y) }
+            val bitmap = Bitmap.allocate(Bitmap.Spec(res, rep))
+            Canvas.forBitmap(bitmap.zero()).use { canvas -> drawTo(canvas, transform = tr) }
+            return bitmap
         }
 
     }
@@ -567,6 +572,90 @@ sealed interface Picture : AutoCloseable {
             }
         }
 
+        private fun findBoundaryPoints(bitmap: Bitmap, crop: Rectangle? = null): DoubleArray {
+            val (res, rep) = bitmap.spec
+            val crop = crop ?: Rectangle(0, 0, res.widthPx, res.heightPx)
+            val cropW = crop.width
+            val cropH = crop.height
+            // @formatter:off
+            val plane: Int; val offset: Int; val stride: Int
+            when (rep.pixelFormat.code) {
+                AV_PIX_FMT_GBRAPF32 -> { plane = 3; offset = 0; stride = 4 }
+                AV_PIX_FMT_RGBAF32 -> { plane = 0; offset = 12; stride = 16; }
+                else -> throw IllegalArgumentException("Unsupported pixel format: ${rep.pixelFormat}")
+            }
+            // @formatter:on
+            val ls = bitmap.linesize(plane)
+            val seg = bitmap.memorySegment(plane).asSlice(crop.y * ls.toLong() + crop.x * stride + offset)
+            val lef = IntArray(cropH).apply { fill(Int.MAX_VALUE) }
+            val rig = IntArray(cropH).apply { fill(Int.MIN_VALUE) }
+            val top = IntArray(cropW).apply { fill(Int.MAX_VALUE) }
+            val bot = IntArray(cropW).apply { fill(Int.MIN_VALUE) }
+            for (y in 0..<cropH) {
+                var i = y * ls.toLong()
+                for (x in 0..<cropW) {
+                    if (seg.getFloat(i) /* alpha */ > 0.001f) {
+                        lef[y] = min(lef[y], x)
+                        rig[y] = max(rig[y], x)
+                        top[x] = min(top[x], y)
+                        bot[x] = max(bot[x], y)
+                    }
+                    i += stride
+                }
+            }
+            val bd = DoubleArray(4 * (cropH + cropW))
+            var b = 0
+            for (y in 0..<cropH) {
+                val lx = lef[y]
+                if (lx == Int.MAX_VALUE) continue
+                val rx = rig[y]
+                val sy = y + 0.5
+                bd[b++] = lx.toDouble()
+                bd[b++] = sy
+                bd[b++] = rx + 1.0
+                bd[b++] = sy
+            }
+            for (x in 0..<cropW) {
+                val ty = top[x]
+                if (ty == Int.MAX_VALUE) continue
+                val by = bot[x]
+                val sx = x + 0.5
+                bd[b++] = sx
+                bd[b++] = ty.toDouble()
+                bd[b++] = sx
+                bd[b++] = by + 1.0
+            }
+            return bd.copyOf(b)
+        }
+
+        private fun findNonBlankBounds(boundaryPoints: DoubleArray, transform: AffineTransform? = null): Rectangle2D? {
+            if (boundaryPoints.isEmpty())
+                return null
+
+            val transformedBoundaryPoints: DoubleArray
+            if (transform == null || transform.isIdentity)
+                transformedBoundaryPoints = boundaryPoints
+            else {
+                transformedBoundaryPoints = DoubleArray(boundaryPoints.size)
+                transform.transform(boundaryPoints, 0, transformedBoundaryPoints, 0, boundaryPoints.size / 2)
+            }
+
+            var x0 = Double.POSITIVE_INFINITY
+            var y0 = Double.POSITIVE_INFINITY
+            var x1 = Double.NEGATIVE_INFINITY
+            var y1 = Double.NEGATIVE_INFINITY
+            var i = 0
+            while (i < transformedBoundaryPoints.size) {
+                val x = transformedBoundaryPoints[i++]
+                val y = transformedBoundaryPoints[i++]
+                x0 = min(x0, x)
+                y0 = min(y0, y)
+                x1 = max(x1, x)
+                y1 = max(y1, y)
+            }
+            return Rectangle2D.Double(x0, y0, x1 - x0, y1 - y0)
+        }
+
     }
 
 
@@ -575,9 +664,6 @@ sealed interface Picture : AutoCloseable {
         private val lock = ReentrantLock()
         private var loaded: Any? = null
         private var closed = false
-
-        val isRaster: Boolean
-            get() = file.extension in RASTER_EXTS
 
         /** @throws IllegalStateException */
         val picture: Picture

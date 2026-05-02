@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.project
 import com.loadingbyte.cinecred.imaging.Font.Companion.CAPITAL_SPACING_FEATURE
 import com.loadingbyte.cinecred.imaging.Font.Companion.KERNING_FEATURE
 import com.loadingbyte.cinecred.imaging.Font.Companion.LIGATURES_FEATURES
+import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
 import com.loadingbyte.cinecred.project.BodyLayout.*
@@ -386,7 +387,14 @@ private val LAYER_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<Layer>> = listOf(
 private val PICTURE_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<PictureStyle>> = listOf(
     StyleEffectivitySpec(
         PictureStyle::cropBlankSpace.st(),
-        isAlmostEffective = { _, style -> style.picture.loader.let { it == null || it.isRaster } }
+        isAlmostEffective = { _, style ->
+            try {
+                val pic = style.picture.loader?.picture
+                pic is Picture.Raster && !pic.bitmap.spec.representation.pixelFormat.hasAlpha
+            } catch (_: IllegalStateException) {
+                false
+            }
+        }
     )
 )
 

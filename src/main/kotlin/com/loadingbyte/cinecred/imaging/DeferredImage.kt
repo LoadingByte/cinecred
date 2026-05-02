@@ -367,24 +367,22 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
         init {
             require(cropLeft >= 0.0 && cropRight >= 0.0 && cropTop >= 0.0 && cropBottom >= 0.0)
-            require(!cropBlankSpace || picture is Picture.Vector) { "Cannot crop the blank space of raster pictures." }
 
-            var crop = computeCrop(picture, cropLeft, cropRight, cropTop, cropBottom)
-            if (picture is Picture.Vector && cropBlankSpace)
-                crop = crop.createIntersection(
-                    Rectangle2D.Double(picture.cropX, picture.cropY, picture.cropWidth, picture.cropHeight)
-                )
-            require(crop.width > 0.0 && crop.height > 0.0)
-            this.crop = crop
-            isCropped = crop.width != picture.width || crop.height != picture.height
+            val userCrop = computeCrop(picture, cropLeft, cropRight, cropTop, cropBottom)
+            require(userCrop.width > 0.0 && userCrop.height > 0.0)
+            crop = userCrop
+            isCropped = userCrop.width != picture.width || userCrop.height != picture.height
+
+            val blankCrop = (if (cropBlankSpace) picture.nonBlankBounds(userCrop) else null)
+                ?: Rectangle2D.Double(0.0, 0.0, userCrop.width, userCrop.height)
 
             // Note: Even though the Canvas would align raster pictures with the pixel grid anyway, it is a good idea to
             // already round the embedded size now so that the layout code sees the same size as is later drawn.
             // In addition, this aligns the vector backends with the canvas backend when it comes to embedded size.
             val width = width?.let(::roundIfRaster)
             val height = height?.let(::roundIfRaster)
-            val w = width ?: roundIfRaster(crop.width * if (height != null) height / crop.height else 1.0)
-            val h = height ?: roundIfRaster(crop.height * if (width != null) width / crop.width else 1.0)
+            val w = width ?: roundIfRaster(blankCrop.width * if (height != null) height / blankCrop.height else 1.0)
+            val h = height ?: roundIfRaster(blankCrop.height * if (width != null) width / blankCrop.width else 1.0)
             require(w > 0.0 && h > 0.0)
 
             val rotTransform = when {
@@ -394,20 +392,9 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                 else ->
                     AffineTransform.getRotateInstance(Math.toRadians(rotation.mod(360.0)), w / 2, h / 2)
             }
-            var aabb: Rectangle2D? = null
-            if (rotTransform == null) {
-                this.width = w
-                this.height = h
-            } else {
-                aabb = Rectangle2D.Double(0.0, 0.0, w, h).transformedBy(rotTransform).bounds2D
-                this.width = aabb.width
-                this.height = aabb.height
-            }
-            transform = AffineTransform().apply {
-                if (aabb != null) {
-                    translate(-aabb.x, -aabb.y)
+            val transform = AffineTransform().apply {
+                if (rotTransform != null)
                     concatenate(rotTransform)
-                }
                 if (flipH) {
                     translate(w, 0.0)
                     scale(-1.0, 1.0)
@@ -416,8 +403,18 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     translate(0.0, h)
                     scale(1.0, -1.0)
                 }
-                scale(w / crop.width, h / crop.height)
+                scale(w / blankCrop.width, h / blankCrop.height)
+                translate(-blankCrop.x, -blankCrop.y)
             }
+            var aabb: Rectangle2D? = null
+            if (cropBlankSpace && rotTransform != null && rotTransform.type and AffineTransform.TYPE_GENERAL_ROTATION != 0)
+                aabb = picture.nonBlankBounds(userCrop, transform)
+            if (aabb == null)
+                aabb = Rectangle2D.Double(0.0, 0.0, w, h).transformedBy(rotTransform).bounds2D
+            transform.preConcatenate(AffineTransform.getTranslateInstance(-aabb.x, -aabb.y))
+            this.width = aabb.width
+            this.height = aabb.height
+            this.transform = transform
         }
 
         private fun roundIfRaster(size: Double) = roundIfRaster(picture, size)

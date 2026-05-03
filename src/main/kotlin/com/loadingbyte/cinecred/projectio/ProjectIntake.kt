@@ -148,11 +148,12 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
 
     private fun reloadOrRemoveCreditsFiles(changedFiles: List<Path>) {
         var push = false
-        for (changedFile in changedFiles) if (!changedFile.isRegularFile()) {
+        for (changedFile in changedFiles) if (!changedFile.isRegularFile() || changedFile.isHidden()) {
+            push = push || changedFile in creditsWorkbooks || changedFile in creditsLogs ||
+                    changedFile in linkedCreditsWatchers
             creditsWorkbooks.remove(changedFile)
             creditsLogs.remove(changedFile)
             linkedCreditsWatchers.remove(changedFile)?.cancel()
-            push = true
         } else {
             val fileExt = changedFile.extension
             try {
@@ -269,6 +270,9 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         // been marked as complete by the time the OS notifies us about the newly generated file.
         if (RenderQueue.isRenderedFile(fileOrDir))
             return
+
+        if (fileOrDir.isHidden())
+            removeAuxFileOrDir(fileOrDir)
 
         if (fileOrDir.isRegularFile() && hasFontFilename(fileOrDir)) {
             if (isFileLocked(fileOrDir, attempt))

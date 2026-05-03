@@ -129,7 +129,7 @@ class ProjectController(
 
     // STEP 2:
     // Set up the project intake, which will notify us about changes to the credits spreadsheet and auxiliary files.
-    // Upon construction, the intake will immediately push the project fonts, pic loaders, and tapes from this thread.
+    // Upon construction, the intake will immediately push the project fonts, pic loaders, and tapes.
     // This in turn means that those three collections will be initialized before the constructor returns.
 
     private val projectIntake = ProjectIntake(projectDir, object : ProjectIntake.Callbacks {

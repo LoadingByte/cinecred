@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.projectio
 
+import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.delivery.RenderQueue
@@ -14,12 +15,13 @@ import com.loadingbyte.cinecred.projectio.service.ServiceWatcher
 import com.loadingbyte.cinecred.projectio.service.readServiceLink
 import java.io.IOException
 import java.net.URI
+import java.nio.channels.FileChannel
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import kotlin.io.path.*
@@ -27,8 +29,7 @@ import kotlin.io.path.*
 
 /**
  * Upon creation of a new instance of this class, the callbacks [Callbacks.pushProjectFonts],
- * [Callbacks.pushPictureLoaders], and [Callbacks.pushTapes] are immediately called from the same thread before the
- * constructor returns.
+ * [Callbacks.pushPictureLoaders], and [Callbacks.pushTapes] are immediately called before the constructor returns.
  * In contrast, the callback [Callbacks.pushCreditsWorkbooks] will be called later from a separate thread.
  *
  * Neither the constructor nor any method in this class throws exceptions. Instead, errors are gracefully handled and,
@@ -49,6 +50,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         }
     }
 
+    // All operations are performed in this singular thread, which means we don't need to make them thread-safe.
     private val executor = Executors.newSingleThreadScheduledExecutor { runnable ->
         Thread(runnable, "ProjectIntake").apply { isDaemon = true }
     }
@@ -57,9 +59,10 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
     private val creditsLogs = HashMap<Path, List<ParserMsg>>()
     private val linkedCreditsWatchers = HashMap<Path, ServiceWatcher>()
 
-    private var auxFileEventBatch = HashMap<Path, RecursiveFileWatcher.Event>()
     private val auxFileEventBatchLock = ReentrantLock()
-    private val auxFileEventBatchProcessor = AtomicReference<ScheduledFuture<*>?>()
+    private var auxFileEventBatch = HashMap<Path, Pair<RecursiveFileWatcher.Event, Int>>()
+    private var auxFileEventBatchVersion = 0L
+    private var auxFileEventBatchProcessor: ScheduledFuture<*>? = null
 
     private val projectFonts = HashMap<Path, List<Font>>()
     private val pictureLoaders = PathTreeMap<Picture.Loader>()
@@ -71,12 +74,17 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
     private var tapesChanged = true
 
     init {
-        // Load the initially present auxiliary files (project fonts, pictures, tapes) in the current thread, which is
-        // required by the class's contract. After that, all actions will be performed in the executor thread, which is
-        // why the class doesn't need locking mechanisms.
-        for (projectFileOrDir in projectDir.walkSafely())
-            reloadAuxFileOrDir(projectFileOrDir)
-        pushAuxiliaryFileChanges()
+        // Load the initially present auxiliary files (project fonts, pictures, tapes), and let this thread wait until
+        // completion, as is required by the class's contract. We perform the loading in the executor thread instead of
+        // this thread for two reasons: First, all other operations are also done in the executor thread, which permits
+        // us to omit locking. Second, reloadAuxFileOrDir() might schedule a task in the executor thread, which we do
+        // not want to run before our first push down below is done -- and since we're blocking the executor thread,
+        // the scheduled task can't run.
+        executor.submit {
+            for (projectFileOrDir in projectDir.walkSafely())
+                reloadAuxFileOrDir(projectFileOrDir, attempt = 0)
+            pushAuxiliaryFileChanges()
+        }.get()
 
         // Load the initially present credits files in the executor thread.
         val creditsFiles = try {
@@ -86,40 +94,15 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                 LOGGER.error("Cannot list files in project dir '{}'.", projectDir, e)
             emptyList()
         }.filter { file -> file.isRegularFile() && hasCreditsFilename(file) }
-        executor.submit(throwableAwareTask { reloadCreditsFiles(creditsFiles) })
+        reloadOrRemoveCreditsFilesOnceReadable(creditsFiles, delay = 0, attempt = 0)
 
         // Watch for future changes in the new project dir.
         RecursiveFileWatcher.watch(projectDir) { event: RecursiveFileWatcher.Event, file: Path ->
             if (hasCreditsFilename(file)) {
-                // Process changes to the credits file in the executor thread.
                 // Also wait a moment so that the file has been fully written.
-                executor.schedule(throwableAwareTask { reloadCreditsFiles(listOf(file)) }, 100, TimeUnit.MILLISECONDS)
-            } else {
-                // Changes to auxiliary files are batched to reduce the number of pushes when, e.g., a long image
-                // sequence is copied into the project dir.
-                // For this, we first record the event to a map, overriding the previous event for that file if there
-                // was any. We also record events for the changed file's parent dir to account for image sequences.
-                auxFileEventBatchLock.withLock {
-                    val batch = auxFileEventBatch
-                    val parent = file.parent
-                    batch[file] = event
-                    batch[parent] = if (parent.exists()) MODIFY else DELETE
-                }
-                // We then schedule a task that will later apply the batched changes in one go.
-                val newProcessor = executor.schedule(throwableAwareTask {
-                    val batch = auxFileEventBatchLock.withLock {
-                        auxFileEventBatch.also { auxFileEventBatch = HashMap() }
-                    }
-                    for ((defFile, defEvent) in batch) {
-                        removeAuxFileOrDir(defFile)
-                        if (defEvent == MODIFY)
-                            reloadAuxFileOrDir(defFile)
-                    }
-                    pushAuxiliaryFileChanges()
-                }, 500, TimeUnit.MILLISECONDS)
-                // Cancel the previous task if it hasn't started yet
-                auxFileEventBatchProcessor.getAndSet(newProcessor)?.cancel(false)
-            }
+                reloadOrRemoveCreditsFilesOnceReadable(listOf(file), delay = 100, attempt = 0)
+            } else
+                reloadOrRemoveAuxFileOrDirLater(file, event, attempt = 0)
         }
     }
 
@@ -153,7 +136,17 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         executor.shutdown()
     }
 
-    private fun reloadCreditsFiles(changedFiles: List<Path>) {
+    private fun reloadOrRemoveCreditsFilesOnceReadable(changedFiles: List<Path>, delay: Long, attempt: Int) {
+        // Process changes to the credits file in the executor thread.
+        executor.schedule(throwableAwareTask {
+            val (locked, unlocked) = changedFiles.partition { f -> f.isRegularFile() && isFileLocked(f, attempt) }
+            if (locked.isNotEmpty())
+                reloadOrRemoveCreditsFilesOnceReadable(locked, 500, attempt + 1)
+            reloadOrRemoveCreditsFiles(unlocked)
+        }, delay, TimeUnit.MILLISECONDS)
+    }
+
+    private fun reloadOrRemoveCreditsFiles(changedFiles: List<Path>) {
         var push = false
         for (changedFile in changedFiles) if (!changedFile.isRegularFile()) {
             creditsWorkbooks.remove(changedFile)
@@ -233,7 +226,42 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         callbacks.pushCreditsWorkbooks(creditsWorkbooks, log, pollable = linkedCreditsWatchers.isNotEmpty())
     }
 
-    private fun reloadAuxFileOrDir(fileOrDir: Path) {
+    private fun reloadOrRemoveAuxFileOrDirLater(fileOrDir: Path, event: RecursiveFileWatcher.Event, attempt: Int) {
+        auxFileEventBatchLock.withLock {
+            // Changes to auxiliary files are batched to reduce the number of pushes when, e.g., a long image sequence
+            // is copied into the project dir.
+            // For this, we first record the event to a map, overriding the previous event for that file if there was
+            // any. We also record events for the changed file's parent dir to account for image sequences.
+            val batch = auxFileEventBatch
+            val parent = fileOrDir.parent
+            batch[fileOrDir] = Pair(event, attempt)
+            batch[parent] = Pair(if (parent.exists()) MODIFY else DELETE, attempt)
+            val curVersion = ++auxFileEventBatchVersion
+            // We then schedule a task that will later apply the batched changes in one go.
+            // Cancel the previous task if it hasn't started yet
+            auxFileEventBatchProcessor?.cancel(false)
+            auxFileEventBatchProcessor = executor.schedule(throwableAwareTask {
+                val batch = auxFileEventBatchLock.withLock {
+                    // If new aux file events have arrived in the meantime, but this task wasn't canceled in time, abort
+                    // the task now. This makes sure that there's always a delay between when an event arrives and is
+                    // processed. A nice side effect of that delay is waiting until whoever modified the file is done
+                    // writing to it.
+                    if (auxFileEventBatchVersion != curVersion)
+                        return@throwableAwareTask
+                    auxFileEventBatch.also { auxFileEventBatch = HashMap() }
+                }
+                for ((batchFile, batchValue) in batch) {
+                    val (batchEvent, batchAttempt) = batchValue
+                    removeAuxFileOrDir(batchFile)
+                    if (batchEvent == MODIFY)
+                        reloadAuxFileOrDir(batchFile, batchAttempt)
+                }
+                pushAuxiliaryFileChanges()
+            }, 500, TimeUnit.MILLISECONDS)
+        }
+    }
+
+    private fun reloadAuxFileOrDir(fileOrDir: Path, attempt: Int) {
         // If the file has been generated by a render job, don't reload the project. Otherwise, generating image
         // sequences would be very expensive because we would constantly reload the project. Note that we do not
         // only consider the current render job, but all render jobs in the render job list. This ensures that even
@@ -242,10 +270,21 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         if (RenderQueue.isRenderedFile(fileOrDir))
             return
 
-        val newFonts = tryReadFonts(fileOrDir)
-        if (newFonts.isNotEmpty()) {
-            projectFonts[fileOrDir] = newFonts
-            projectFontsChanged = true
+        if (fileOrDir.isRegularFile() && hasFontFilename(fileOrDir)) {
+            if (isFileLocked(fileOrDir, attempt))
+                reloadOrRemoveAuxFileOrDirLater(fileOrDir, MODIFY, attempt + 1)
+            else {
+                val newFonts = try {
+                    Font.read(fileOrDir)
+                } catch (e: Exception) {
+                    LOGGER.error("Font '{}' cannot be read.", fileOrDir.name, e)
+                    emptyList()
+                }
+                if (newFonts.isNotEmpty()) {
+                    projectFonts[fileOrDir] = newFonts
+                    projectFontsChanged = true
+                }
+            }
             return
         }
 
@@ -320,6 +359,19 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
         tapesChanged = false
     }
 
+    private fun isFileLocked(file: Path, attempt: Int): Boolean {
+        // On Windows, some users observed that files like the credits file can be locked while Excel writes to it.
+        // As a workaround, we quickly check whether the file can be opened, and if not, the caller of this method will
+        // wait a bit longer and then try again.
+        if (SystemInfo.isWindows && attempt < 20)
+            try {
+                FileChannel.open(file, StandardOpenOption.READ).close()
+            } catch (_: IOException) {
+                return true
+            }
+        return false
+    }
+
     private fun <V : Any> buildDedupMap(builderAction: ((String, V) -> Unit) -> Unit): Map<String, V> {
         val map = HashMap<String, V>()
         val dupKeys = HashSet<String>()
@@ -335,23 +387,14 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
 
     companion object {
 
-        private val CREDITS_EXTS = SPREADSHEET_FORMATS.map(SpreadsheetFormat::fileExt) + SERVICE_LINK_EXTS
+        private val CREDITS_EXTS = sortedSetOf(String.CASE_INSENSITIVE_ORDER).also {
+            SPREADSHEET_FORMATS.mapTo(it, SpreadsheetFormat::fileExt)
+            it.addAll(SERVICE_LINK_EXTS)
+        }
         private val FONT_EXTS = sortedSetOf(String.CASE_INSENSITIVE_ORDER, "ttf", "ttc", "otf", "otc")
 
-        fun hasCreditsFilename(file: Path): Boolean {
-            val fileExt = file.extension
-            return CREDITS_EXTS.any { ext -> ext.equals(fileExt, ignoreCase = true) }
-        }
-
-        private fun tryReadFonts(file: Path): List<Font> {
-            if (file.isRegularFile() && file.extension in FONT_EXTS)
-                try {
-                    return Font.read(file)
-                } catch (e: Exception) {
-                    LOGGER.error("Font '{}' cannot be read.", file.name, e)
-                }
-            return emptyList()
-        }
+        fun hasCreditsFilename(file: Path): Boolean = file.extension in CREDITS_EXTS
+        fun hasFontFilename(file: Path): Boolean = file.extension in FONT_EXTS
 
         private inline fun <T> dedupNames(list: MutableList<T>, getName: (T) -> String, changeName: (T, String) -> T) {
             for (idx in list.indices) {

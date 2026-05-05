@@ -665,6 +665,7 @@ class PlaybackCtrl : PlaybackCtrlComms {
                     if (frameIdx != newFrameIdx) {
                         closeFrame(frame)
                         frameIdx = newFrameIdx
+                        frame = null
                         frame = source?.materializeFrame(newFrameIdx)
                     }
                     // If rendering took too long and playback has already moved beyond the new frame, discard it.

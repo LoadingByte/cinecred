@@ -3,9 +3,11 @@ package com.loadingbyte.cinecred.imaging
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.DeferredImage.EmbeddedTape.Align.*
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
+import org.bytedeco.ffmpeg.global.avutil.*
 import java.awt.Point
 import java.awt.Rectangle
 import java.lang.ref.SoftReference
+import java.nio.ByteOrder
 import java.util.*
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicReference
@@ -713,6 +715,8 @@ class DeferredVideo private constructor(
             private lateinit var reader: Tape.SequentialReader
             private lateinit var previewTape: Tape
 
+            private var readConverter: BitmapConverter? = null
+            private var readConvertedSpec: Bitmap.Spec? = null
             private lateinit var readCrop: Rectangle
             private lateinit var readReorder: Reorder
             private lateinit var readSpec: Bitmap.Spec
@@ -749,6 +753,51 @@ class DeferredVideo private constructor(
                         readCrop = embeddedTape.crop
                     }
 
+                    // If the pixel format directly from the source has chroma subsampling, insert a converter stage
+                    // to an otherwise equivalent non-subsampled pixel format. This is necessary for interlaced export,
+                    // cropping, and reordering, but for simplicity, we simply always do it.
+                    var convertedSpec = origSpec
+                    val pixFmt = origSpec.representation.pixelFormat
+                    if (pixFmt.hasChromaSub) {
+                        val alpha = pixFmt.hasAlpha
+                        val le = pixFmt.byteOrder == ByteOrder.LITTLE_ENDIAN
+                        val convertedPixFmtCode = when (pixFmt.depth) {
+                            8 -> when (alpha) {
+                                true -> AV_PIX_FMT_YUVA444P
+                                else -> AV_PIX_FMT_YUV444P
+                            }
+                            9 -> when (alpha) {
+                                true -> if (le) AV_PIX_FMT_YUVA444P9LE else AV_PIX_FMT_YUVA444P9BE
+                                else -> if (le) AV_PIX_FMT_YUV444P9LE else AV_PIX_FMT_YUV444P9BE
+                            }
+                            10 -> when (alpha) {
+                                true -> if (le) AV_PIX_FMT_YUVA444P10LE else AV_PIX_FMT_YUVA444P10BE
+                                else -> if (le) AV_PIX_FMT_YUV444P10LE else AV_PIX_FMT_YUV444P10BE
+                            }
+                            12 -> when (alpha) {
+                                true -> if (le) AV_PIX_FMT_YUVA444P12LE else AV_PIX_FMT_YUVA444P12BE
+                                else -> if (le) AV_PIX_FMT_YUV444P12LE else AV_PIX_FMT_YUV444P12BE
+                            }
+                            14 -> when (alpha) {
+                                true -> if (le) AV_PIX_FMT_YUVA444P16LE else AV_PIX_FMT_YUVA444P16BE  // fallback
+                                else -> if (le) AV_PIX_FMT_YUV444P14LE else AV_PIX_FMT_YUV444P14BE
+                            }
+                            16 -> when (alpha) {
+                                true -> if (le) AV_PIX_FMT_YUVA444P16LE else AV_PIX_FMT_YUVA444P16BE
+                                else -> if (le) AV_PIX_FMT_YUV444P16LE else AV_PIX_FMT_YUV444P16BE
+                            }
+                            else -> if (le) AV_PIX_FMT_YUVA444P16LE else AV_PIX_FMT_YUVA444P16BE  // fallback
+                        }
+                        convertedSpec = origSpec.copy(
+                            representation = origSpec.representation.copy(
+                                pixelFormat = Bitmap.PixelFormat.of(convertedPixFmtCode),
+                                chromaLocation = AVCHROMA_LOC_UNSPECIFIED
+                            )
+                        )
+                        readConverter = BitmapConverter(origSpec, convertedSpec)
+                        readConvertedSpec = convertedSpec
+                    }
+
                     readReorder = when (embeddedTape.rotation) {
                         0 -> Reorder(flipH = embeddedTape.flipH, flipV = embeddedTape.flipV, transpose = false)
                         90 -> Reorder(flipH = !embeddedTape.flipV, flipV = embeddedTape.flipH, transpose = true)
@@ -756,7 +805,7 @@ class DeferredVideo private constructor(
                         else -> Reorder(flipH = embeddedTape.flipV, flipV = !embeddedTape.flipH, transpose = true)
                     }
 
-                    readSpec = origSpec.copy(
+                    readSpec = convertedSpec.copy(
                         resolution = when (embeddedTape.rotation % 180 == 0) {
                             true -> Resolution(readCrop.width, readCrop.height)
                             else -> Resolution(readCrop.height, readCrop.width)
@@ -769,16 +818,16 @@ class DeferredVideo private constructor(
                             // When vertically flipping an interlaced tape, what previously was the top field becomes
                             // the bottom field (and vice versa), so we when previously the top field came first, now
                             // the bottom field comes first (and vice versa).
-                            readReorder.flipV -> when (origSpec.scan) {
+                            readReorder.flipV -> when (convertedSpec.scan) {
                                 Bitmap.Scan.PROGRESSIVE -> Bitmap.Scan.PROGRESSIVE
                                 Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST -> Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST
                                 Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST -> Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST
                             }
-                            else -> origSpec.scan
+                            else -> convertedSpec.scan
                         },
                         content = when {
                             readReorder.transpose -> Bitmap.Content.PROGRESSIVE_FRAME
-                            else -> origSpec.content
+                            else -> convertedSpec.content
                         }
                     )
                 }, ::close)
@@ -845,7 +894,13 @@ class DeferredVideo private constructor(
                     }
                     Source.UNAVAILABLE -> return missingMediaBitmap.value
                 }
-                val croppedBitmap = readCrop.run { origBitmap.view(x, y, width, height, 1) }
+                var convertedBitmap = origBitmap
+                readConverter?.let { conv ->
+                    convertedBitmap = Bitmap.allocate(readConvertedSpec!!)
+                    conv.convert(origBitmap, convertedBitmap)
+                }
+                val croppedBitmap = readCrop.run { convertedBitmap.view(x, y, width, height, 1) }
+                if (convertedBitmap != origBitmap) convertedBitmap.close()
                 val (flipH, flipV, transpose) = readReorder
                 if (!flipH && !flipV && !transpose)
                     return croppedBitmap
@@ -865,6 +920,7 @@ class DeferredVideo private constructor(
             fun close() {
                 if (source == Source.READER)
                     reader.close()
+                readConverter?.close()
                 frameOverlayer?.close()
                 topFieldOverlayer?.close()
                 botFieldOverlayer?.close()

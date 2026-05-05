@@ -44,6 +44,7 @@ Cinecred Changelog
   proper text order across all lines.
 - JPEG pictures with an EXIF orientation tag are now properly rotated.
 - PNG image sequences with 8-bit palettes can now be ingested.
+- Embedded videos with chroma subsampling no longer prevent interlaced export.
 - Exported PDFs no longer duplicate pictures, thereby reducing file size.
 - PDF export no longer inverts vertical shearing.
 - Timeline export no longer fails upon encountering an image sequence.

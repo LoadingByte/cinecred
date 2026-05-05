@@ -199,10 +199,8 @@ class DeckLink(
 
     companion object {
 
-        fun compatibleRepresentation(depth: Depth, colorSpace: ColorSpace) = Bitmap.Representation(
-            depth.pixelFormat, depth.range, colorSpace,
-            if (depth.pixelFormat.hasAlpha) Bitmap.Alpha.STRAIGHT else Bitmap.Alpha.OPAQUE
-        )
+        fun compatibleRepresentation(depth: Depth, colorSpace: ColorSpace): Bitmap.Representation =
+            Bitmap.Representation(depth.pixelFormat, depth.range, colorSpace, Bitmap.Alpha.OPAQUE)
 
         // Causes the static initializer to be executed, which registers the notification callback.
         fun preload() {}
@@ -382,7 +380,7 @@ class DeckLink(
 
 
     enum class Depth(val bits: Int, val code: Int, val pixelFormat: Bitmap.PixelFormat, val range: Bitmap.Range) {
-        D8(8, PixelFormat_8BitBGRA(), Bitmap.PixelFormat.of(AV_PIX_FMT_BGRA), Bitmap.Range.FULL),
+        D8(8, PixelFormat_8BitBGRA(), Bitmap.PixelFormat.of(AV_PIX_FMT_BGR0), Bitmap.Range.FULL),
         D10(10, PixelFormat_10BitRGB(), Bitmap.PixelFormat.of(AV_PIX_FMT_X2RGB10BE), Bitmap.Range.LIMITED)
     }
 

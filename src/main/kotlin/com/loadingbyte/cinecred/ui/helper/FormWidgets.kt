@@ -1325,14 +1325,14 @@ abstract class AbstractResolutionWidget<V : Any> protected constructor(
                 is Preset.Null -> p.label
             }
         }
-    ).apply { value = CHOICE_PRESETS[1] /* start out with Full HD */ }
+    )
 
     private val widthWidget = makeDimensionSpinner()
     private val heightWidget = makeDimensionSpinner()
     private val timesLabel = JLabel("\u00D7")
 
     private var initializedCustom = false
-    private var prevChoicePreset = presetWidget.value as Preset.Choice
+    private var prevChoicePreset = CHOICE_PRESETS[1]  // start out with Full HD
 
     private fun makeDimensionSpinner() =
         SpinnerWidget(Int::class.javaObjectType, SpinnerNumberModel(1, 1, null, 10), "#", WidthSpec.LITTLE)
@@ -1362,6 +1362,8 @@ abstract class AbstractResolutionWidget<V : Any> protected constructor(
                     prevChoicePreset = preset
             notifyChangeListenersAboutOtherWidgetChange(widget)
         }
+        presetWidget.value = prevChoicePreset
+
         widthWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
         heightWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
     }

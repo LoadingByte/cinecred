@@ -378,6 +378,7 @@ class BitmapConverter(
                     val fmtObj = fmtObjs[fmt]
                     val priObj = priObjs[pri]
                     val trcObj = trcObjs[trc]
+                    val conObj = conObjs[con]
 
                     val firstToFmt = if (fmtObj.isFullF) firstFullFFmt else fmt + 1
 
@@ -456,22 +457,28 @@ class BitmapConverter(
                             )
                                 for ((toPri, toPriObj) in priObjs.withIndex())
                                     if (pri == toPri || priObj!!.hasCode && toPriObj!!.hasCode)
-                                        for (toCon in conObjs.indices)
-                                            if (nearestNeighbor && !pmu) {
-                                                for ((toTrc, toTrcObj) in trcObjs.withIndex())
-                                                    if (pri == toPri && trc == toTrc || trcObj.hasCode && toTrcObj.hasCode)
+                                        for ((toCon, toConObj) in conObjs.withIndex())
+                                            if (fmtObj.px.vChromaSub == 0 && toFmtObj.px.vChromaSub == 0 ||
+                                                conObj == Bitmap.Content.PROGRESSIVE_FRAME &&
+                                                toConObj == Bitmap.Content.PROGRESSIVE_FRAME
+                                            )
+                                                if (nearestNeighbor && !pmu) {
+                                                    for ((toTrc, toTrcObj) in trcObjs.withIndex())
+                                                        if (pri == toPri && trc == toTrc || trcObj.hasCode && toTrcObj.hasCode)
+                                                            for (toRes in resObjs.indices)
+                                                                link(
+                                                                    ZIMG, true, toFmt, toPri, toTrc, false, toCon, toRes
+                                                                )
+                                                } else {
+                                                    link(ZIMG, true, toFmt, toPri, trc, pmu, toCon, res)
+                                                    if (!pmu)
+                                                        for ((toTrc, toTO) in trcObjs.withIndex())
+                                                            if (pri == toPri && trc == toTrc || trcObj.hasCode && toTO.hasCode)
+                                                                link(ZIMG, true, toFmt, toPri, toTrc, false, toCon, res)
+                                                    if (nearestNeighbor || (!toFmtObj.px.hasAlpha || pmu) && trcObj == LINEAR)
                                                         for (toRes in resObjs.indices)
-                                                            link(ZIMG, true, toFmt, toPri, toTrc, false, toCon, toRes)
-                                            } else {
-                                                link(ZIMG, true, toFmt, toPri, trc, pmu, toCon, res)
-                                                if (!pmu)
-                                                    for ((toTrc, toTO) in trcObjs.withIndex())
-                                                        if (pri == toPri && trc == toTrc || trcObj.hasCode && toTO.hasCode)
-                                                            link(ZIMG, true, toFmt, toPri, toTrc, false, toCon, res)
-                                                if (nearestNeighbor || (!toFmtObj.px.hasAlpha || pmu) && trcObj == LINEAR)
-                                                    for (toRes in resObjs.indices)
-                                                        link(ZIMG, true, toFmt, toPri, trc, pmu, toCon, toRes)
-                                            }
+                                                            link(ZIMG, true, toFmt, toPri, trc, pmu, toCon, toRes)
+                                                }
                         }
 
                     // SKCMS stage
@@ -529,7 +536,10 @@ class BitmapConverter(
             val cs = priObjs[pri(state)]?.let { ColorSpace.of(it, trcObjs[trc(state)]) }
             val alpha = if (!fmt.px.hasAlpha) OPAQUE else if (pmu(state)) PREMULTIPLIED else STRAIGHT
             val rep = Bitmap.Representation(fmt.px, fmt.range, cs, fmt.coeffs, fmt.loc, alpha)
-            return Bitmap.Spec(resObjs[res(state)], rep, srcSpec.scan, srcSpec.content)
+            val content = conObjs[con(state)]
+            val scan = if (content == Bitmap.Content.PROGRESSIVE_FRAME) Bitmap.Scan.PROGRESSIVE else
+                if (srcSpec.scan != Bitmap.Scan.PROGRESSIVE) srcSpec.scan else dstSpec.scan
+            return Bitmap.Spec(resObjs[res(state)], rep, scan, content)
         }
 
         companion object {

@@ -679,6 +679,8 @@ class Bitmap private constructor(
 
         init {
             require(chromaLocation in 0..<AVCHROMA_LOC_NB)
+            // Limited range is only well-defined (and well-supported by, e.g., zimg) for integer pixel formats.
+            require(!pixelFormat.isFloat || range == Range.FULL)
             require((pixelFormat.family == PixelFormat.Family.GRAY) == (colorSpace == null))
             require((pixelFormat.family == PixelFormat.Family.YUV) == (yuvCoefficients != null))
             require(pixelFormat.hasChromaSub == (chromaLocation != AVCHROMA_LOC_UNSPECIFIED))

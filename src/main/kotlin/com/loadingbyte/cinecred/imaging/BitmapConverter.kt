@@ -292,24 +292,24 @@ class BitmapConverter(
             val srcRep = srcSpec.representation
             val dstRep = dstSpec.representation
 
-            val (srcFullF, srcAny) = setOf(
+            val (srcF, srcAny) = setOf(
                 Fmt(srcRep.pixelFormat, srcRep.range, srcRep.yuvCoefficients, srcRep.chromaLocation),
                 Fmt(ZimgStage.equiv(srcRep.pixelFormat), srcRep.range, srcRep.yuvCoefficients, srcRep.chromaLocation),
-            ).partition(Fmt::isFullF)
-            val (dstFullF, dstAny) = setOf(
+            ).partition(Fmt::isF)
+            val (dstF, dstAny) = setOf(
                 Fmt(dstRep.pixelFormat, dstRep.range, dstRep.yuvCoefficients, dstRep.chromaLocation),
                 Fmt(ZimgStage.equiv(dstRep.pixelFormat), dstRep.range, dstRep.yuvCoefficients, dstRep.chromaLocation),
-            ).partition(Fmt::isFullF)
-            val fullFPool = HashSet<Fmt>()
-            fullFPool += srcFullF
-            fullFPool += dstFullF
-            fullFPool += Fmt(planarFloatEquiv(srcRep.pixelFormat), FULL, null, AVCHROMA_LOC_UNSPECIFIED)
-            fullFPool += Fmt(planarFloatEquiv(dstRep.pixelFormat), FULL, null, AVCHROMA_LOC_UNSPECIFIED)
-            fullFPool += Fmt(interleavedFloatEquiv(srcRep.pixelFormat), FULL, null, AVCHROMA_LOC_UNSPECIFIED)
-            fullFPool += Fmt(interleavedFloatEquiv(dstRep.pixelFormat), FULL, null, AVCHROMA_LOC_UNSPECIFIED)
+            ).partition(Fmt::isF)
+            val fPool = HashSet<Fmt>()
+            fPool += srcF
+            fPool += dstF
+            fPool += Fmt(planarFloatEquiv(srcRep.pixelFormat), FULL, null, AVCHROMA_LOC_UNSPECIFIED)
+            fPool += Fmt(planarFloatEquiv(dstRep.pixelFormat), FULL, null, AVCHROMA_LOC_UNSPECIFIED)
+            fPool += Fmt(interleavedFloatEquiv(srcRep.pixelFormat), FULL, null, AVCHROMA_LOC_UNSPECIFIED)
+            fPool += Fmt(interleavedFloatEquiv(dstRep.pixelFormat), FULL, null, AVCHROMA_LOC_UNSPECIFIED)
             val fmtObjList = mutableListOf<Fmt>()
             fmtObjList += srcAny
-            fmtObjList += fullFPool
+            fmtObjList += fPool
             fmtObjList += dstAny.asReversed()
             fmtObjs = fmtObjList.toTypedArray()
 
@@ -352,9 +352,9 @@ class BitmapConverter(
         }
 
         private fun fillTable(): Boolean {
-            val firstFullFFmt = fmtObjs.indexOfFirst(Fmt::isFullF)
-            val fullGBRPFFmt = fmtObjs.indexOfFirst(Fmt::isFullGBRPF)
-            val fullGBRAPFFmt = fmtObjs.indexOfFirst(Fmt::isFullGBRAPF)
+            val firstFFmt = fmtObjs.indexOfFirst(Fmt::isF)
+            val gbrpfFmt = fmtObjs.indexOfFirst(Fmt::isGBRPF)
+            val gbrapfFmt = fmtObjs.indexOfFirst(Fmt::isGBRAPF)
 
             val fromStates = IntList(table.size /* large enough */)
             val newStates = IntList(fromStates.capacity)
@@ -380,7 +380,7 @@ class BitmapConverter(
                     val trcObj = trcObjs[trc]
                     val conObj = conObjs[con]
 
-                    val firstToFmt = if (fmtObj.isFullF) firstFullFFmt else fmt + 1
+                    val firstToFmt = if (fmtObj.isF) firstFFmt else fmt + 1
 
                     fun link(
                         type: StageType, ali: Boolean, fmt: Int, pri: Int, trc: Int, pmu: Boolean, con: Int, res: Int
@@ -398,10 +398,10 @@ class BitmapConverter(
                     // states to the next iteration's "next" list.
 
                     // (Un)premultiply or drop alpha channel stage
-                    if (ali && fmtObj.isFullGBRAPF) {
-                        if (fullGBRPFFmt != -1) {
-                            link(UN_PREMUL_OR_DROP_ALPHA_CHANNEL, true, fullGBRPFFmt, pri, trc, false, con, res)
-                            link(UN_PREMUL_OR_DROP_ALPHA_CHANNEL, false, fullGBRPFFmt, pri, trc, false, con, res)
+                    if (ali && fmtObj.isGBRAPF) {
+                        if (gbrpfFmt != -1) {
+                            link(UN_PREMUL_OR_DROP_ALPHA_CHANNEL, true, gbrpfFmt, pri, trc, false, con, res)
+                            link(UN_PREMUL_OR_DROP_ALPHA_CHANNEL, false, gbrpfFmt, pri, trc, false, con, res)
                         }
                         link(UN_PREMUL_OR_DROP_ALPHA_CHANNEL, true, fmt, pri, trc, !pmu, con, res)
                         link(UN_PREMUL_OR_DROP_ALPHA_CHANNEL, false, fmt, pri, trc, !pmu, con, res)
@@ -425,7 +425,7 @@ class BitmapConverter(
                             link(PLANAR_FLOAT, false, toFmt, pri, trc, pmu, con, res)
                         }
                     }
-                    if (fmtObj.isFullRGBF || fmtObj.isFullRGBAF)
+                    if (fmtObj.isRGBF || fmtObj.isRGBAF)
                         for (toFmt in firstToFmt..fmtObjs.lastIndex) {
                             val toFmtObj = fmtObjs[toFmt]
                             if (toFmtObj.px.code == AV_PIX_FMT_X2RGB10BE && toFmtObj.range == LIMITED) {
@@ -450,7 +450,7 @@ class BitmapConverter(
                     // Note: By virtue of the max(), we disallow zimg to output in the source format,
                     // because that could lead to information loss.
                     if (ali && fmtObj.isSupportedByZimg)
-                        for (toFmt in max(firstToFmt, firstFullFFmt)..fmtObjs.lastIndex) {
+                        for (toFmt in max(firstToFmt, firstFFmt)..fmtObjs.lastIndex) {
                             val toFmtObj = fmtObjs[toFmt]
                             if (toFmtObj.isSupportedByZimg &&
                                 (fmtObj.px.hasAlpha == toFmtObj.px.hasAlpha || !toFmtObj.px.hasAlpha && !pmu)
@@ -501,9 +501,9 @@ class BitmapConverter(
                         }
 
                     // Add alpha channel stage
-                    if (ali && fullGBRAPFFmt != -1 && fmtObj.isFullGBRPF) {
-                        link(ADD_ALPHA_CHANNEL, true, fullGBRAPFFmt, pri, trc, false, con, res)
-                        link(ADD_ALPHA_CHANNEL, true, fullGBRAPFFmt, pri, trc, true, con, res)
+                    if (ali && gbrapfFmt != -1 && fmtObj.isGBRPF) {
+                        link(ADD_ALPHA_CHANNEL, true, gbrapfFmt, pri, trc, false, con, res)
+                        link(ADD_ALPHA_CHANNEL, true, gbrapfFmt, pri, trc, true, con, res)
                     }
                 }
 
@@ -604,14 +604,14 @@ class BitmapConverter(
             val px: Bitmap.PixelFormat, val range: Bitmap.Range, val coeffs: Bitmap.YUVCoefficients?, val loc: Int
         ) {
 
-            val isFullF = range == FULL && px.code.let {
+            val isF = px.code.let {
                 it == AV_PIX_FMT_GRAYF32 || it == AV_PIX_FMT_RGBF32 || it == AV_PIX_FMT_RGBAF32 ||
                         it == AV_PIX_FMT_GBRPF32 || it == AV_PIX_FMT_GBRAPF32
             }
-            val isFullRGBF = px.code == AV_PIX_FMT_RGBF32 && range == FULL
-            val isFullRGBAF = px.code == AV_PIX_FMT_RGBAF32 && range == FULL
-            val isFullGBRPF = px.code == AV_PIX_FMT_GBRPF32 && range == FULL
-            val isFullGBRAPF = px.code == AV_PIX_FMT_GBRAPF32 && range == FULL
+            val isRGBF = px.code == AV_PIX_FMT_RGBF32
+            val isRGBAF = px.code == AV_PIX_FMT_RGBAF32
+            val isGBRPF = px.code == AV_PIX_FMT_GBRPF32
+            val isGBRAPF = px.code == AV_PIX_FMT_GBRAPF32
             val isSupportedByPFAsDirty: Boolean
             // Note: We intentionally only consider native-endian PF pixel formats as clean, as it makes no sense
             // to convert from a dirty pixel format to a PF one with an endianness that no other stage supports.
@@ -647,8 +647,7 @@ class BitmapConverter(
                 px.family == other.px.family &&
                         range == other.range &&
                         coeffs == other.coeffs &&
-                        loc == other.loc &&
-                        (range == FULL || px.isFloat == other.px.isFloat)
+                        loc == other.loc
 
             fun hasSameCompositionAs(other: Fmt): Boolean =
                 hasSameCompositionAsExAlpha(other) && px.hasAlpha == other.px.hasAlpha

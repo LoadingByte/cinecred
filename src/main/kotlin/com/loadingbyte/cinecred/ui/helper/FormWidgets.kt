@@ -458,46 +458,24 @@ class TimecodeWidget(
 class TapeSliceWidget : Form.AbstractWidget<TapeSlice>() {
 
     private val formatCB = JComboBox(TimecodeFormat.entries.mapTo(Vector(), ::FormatWrapper))
-    private val inCB = LargeCheckBox(STD_HEIGHT)
-    private val outCB = LargeCheckBox(STD_HEIGHT)
-    private val inSpinner = JSpinner(TimecodeModel(zeroTimecode(format)))
-    private val outSpinner = JSpinner(TimecodeModel(zeroTimecode(format)))
-    private val inEditor = makeTimecodeEditor(inSpinner)
-    private val outEditor = makeTimecodeEditor(outSpinner)
-    private val inResetBtn = JButton(RESET_ICON).apply { toolTipText = l10n("ui.form.tapeSliceResetIn") }
-    private val outResetBtn = JButton(RESET_ICON).apply { toolTipText = l10n("ui.form.tapeSliceResetOut") }
+    private val inWidget = OverrideWidget(TimecodeWidget())
+    private val outWidget = OverrideWidget(TimecodeWidget())
 
     init {
-        formatCB.addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) onFPSOrTcFormatOrRangeChanged() }
-        inCB.addItemListener { inSpinner.isEnabled = inCB.isSelected; notifyChangeListeners() }
-        outCB.addItemListener { outSpinner.isEnabled = outCB.isSelected; notifyChangeListeners() }
-        inSpinner.apply {
-            isEnabled = false
-            addChangeListener { notifyChangeListeners() }
-            putClientProperty(STYLE_CLASS, "monospaced")
-            editor = inEditor
-        }
-        outSpinner.apply {
-            isEnabled = false
-            addChangeListener { notifyChangeListeners() }
-            putClientProperty(STYLE_CLASS, "monospaced")
-            editor = outEditor
-        }
-        inResetBtn.addActionListener { range?.start?.let(::coerceToFormat)?.let { inSpinner.value = it } }
-        outResetBtn.addActionListener { range?.endInclusive?.let(::coerceToFormat)?.let { outSpinner.value = it } }
+        formatCB.addItemListener { e -> if (e.stateChange == ItemEvent.SELECTED) onFPSOrTcFormatOrRangeChanged(true) }
+        inWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
+        outWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
         onFPSOrTcFormatOrRangeChanged()
     }
 
-    override val components = listOf<JComponent>(
-        formatCB,
-        JLabel(l10n("ui.form.tapeSliceIn"), JLabel.TRAILING), inCB, inSpinner, inResetBtn,
-        JLabel(l10n("ui.form.tapeSliceOut"), JLabel.TRAILING), outCB, outSpinner, outResetBtn
-    )
-    override val constraints = listOf(
-        "hmin $STD_HEIGHT, " + WidthSpec.FIT.mig,
-        "newline, sg inout", "", "hmin $STD_HEIGHT, " + WidthSpec.FIT.mig, "",
-        "newline, sg inout", "", "hmin $STD_HEIGHT, " + WidthSpec.FIT.mig, ""
-    )
+    override val components =
+        listOf<JComponent>(formatCB) +
+                JLabel(l10n("ui.form.tapeSliceIn"), JLabel.TRAILING) + inWidget.components +
+                JLabel(l10n("ui.form.tapeSliceOut"), JLabel.TRAILING) + outWidget.components
+    override val constraints =
+        listOf("hmin $STD_HEIGHT, " + WidthSpec.FIT.mig) +
+                "newline, sg inout" + inWidget.constraints +
+                "newline, sg inout" + outWidget.constraints
 
     var fps: FPS? = null
         set(fps) {
@@ -526,19 +504,14 @@ class TapeSliceWidget : Form.AbstractWidget<TapeSlice>() {
         }
 
     override var value: TapeSlice
-        get() = TapeSlice(
-            Opt(inCB.isSelected, inSpinner.value as Timecode),
-            Opt(outCB.isSelected, outSpinner.value as Timecode)
-        )
+        get() = TapeSlice(format, inWidget.value.value, outWidget.value.value)
         set(value) {
-            if (value == this.value)
+            if (value == this.value && value.timecodeFormat == format)
                 return
             withoutChangeListeners {
-                format = value.inPoint.value.format
-                inCB.isSelected = value.inPoint.isActive
-                outCB.isSelected = value.outPoint.isActive
-                inSpinner.value = value.inPoint.value
-                outSpinner.value = value.outPoint.value
+                format = value.timecodeFormat
+                inWidget.value = Override(value.inPoint)
+                outWidget.value = Override(value.outPoint)
             }
             notifyChangeListeners()
         }
@@ -551,21 +524,16 @@ class TapeSliceWidget : Form.AbstractWidget<TapeSlice>() {
             formatCB.isEditable = false
         }
 
-    private fun onFPSOrTcFormatOrRangeChanged() {
-        inEditor.textField.formatterFactory = DefaultFormatterFactory(TimecodeFormatter())
-        outEditor.textField.formatterFactory = DefaultFormatterFactory(TimecodeFormatter())
-        if (updateSpinnerValue(inSpinner) or updateSpinnerValue(outSpinner))
+    private fun onFPSOrTcFormatOrRangeChanged(formatChanged: Boolean = false) {
+        withoutChangeListeners {
+            inWidget.defaultValue = range?.start?.let(::coerceToFormat)
+            outWidget.defaultValue = range?.endInclusive?.let(::coerceToFormat)
+        }
+        if (formatChanged or
+            (inWidget.wrapped as TimecodeWidget).onFPSOrTcFormatOrRangeChanged() or
+            (outWidget.wrapped as TimecodeWidget).onFPSOrTcFormatOrRangeChanged()
+        )
             notifyChangeListeners()
-    }
-
-    private fun updateSpinnerValue(spinner: JSpinner): Boolean {
-        val oldValue = spinner.value as Timecode
-        val newValue = coerceToFormat(oldValue) ?: zeroTimecode(format)
-        val model = TimecodeModel(newValue)
-        spinner.model = model
-        // Firing a state change event is necessary to update the text field.
-        withoutChangeListeners { model.fireStateChanged() }
-        return oldValue != newValue
     }
 
     private fun coerceToFormat(timecode: Timecode): Timecode? =
@@ -597,6 +565,42 @@ class TapeSliceWidget : Form.AbstractWidget<TapeSlice>() {
 
     private data class FormatWrapper(override val item: TimecodeFormat) : ComboBoxWrapper {
         override fun toString() = item.label
+    }
+
+
+    private inner class TimecodeWidget : Form.AbstractWidget<Timecode>() {
+
+        private val spinner = JSpinner(TimecodeModel(zeroTimecode(format)))
+        private val editor = makeTimecodeEditor(spinner)
+
+        init {
+            spinner.apply {
+                isEnabled = false
+                addChangeListener { notifyChangeListeners() }
+                putClientProperty(STYLE_CLASS, "monospaced")
+                editor = this@TimecodeWidget.editor
+            }
+        }
+
+        override val components = listOf(spinner)
+        override val constraints = listOf("hmin $STD_HEIGHT, " + WidthSpec.FIT.mig)
+
+        override var value: Timecode
+            get() = spinner.value as Timecode
+            set(value) {
+                spinner.value = value
+            }
+
+        fun onFPSOrTcFormatOrRangeChanged(): Boolean {
+            editor.textField.formatterFactory = DefaultFormatterFactory(TimecodeFormatter())
+            val oldValue = value
+            val newValue = coerceToFormat(oldValue) ?: zeroTimecode(format)
+            val model = TimecodeModel(newValue)
+            spinner.model = model
+            // Firing a state change event is necessary to update the text field.
+            withoutChangeListeners { model.fireStateChanged() }
+            return oldValue != newValue
+        }
     }
 
 
@@ -1671,30 +1675,30 @@ class FontChooserWidget(
 class FontVariationsWidget : Form.AbstractWidget<FontVariations>(), Form.RowManagingWidget<FontVariations> {
 
     private val spinnerWidgets: List<SpinnerWidget<Double>>
-    private val optWidgets: List<OptWidget<Double>>
+    private val overrideWidgets: List<OverrideWidget<Double>>
 
-    private var stashedVariations = emptyMap<String, Opt<Double>>()
+    private var stashedVariations = emptyMap<String, Double>()
     private val severities = HashMap<String, Severity>()
     private val notices = HashMap<String, Form.Notice>()
 
     init {
         spinnerWidgets = mutableListOf()
-        optWidgets = mutableListOf()
+        overrideWidgets = mutableListOf()
         repeat(MAX_NUM_AXES) {
             val spinnerWidget = SpinnerWidget(
                 Double::class.javaObjectType, SpinnerNumberModel(0.0, 0.0, 1.0, 1.0), widthSpec = WidthSpec.LITTLE
             )
-            val optWidget = OptWidget(spinnerWidget)
-            optWidget.isVisible = false
+            val overrideWidget = OverrideWidget(spinnerWidget)
+            overrideWidget.isVisible = false
             // When an opt spinner widget changes, notify this widget's change listeners that that widget has changed.
-            optWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
+            overrideWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
             spinnerWidgets.add(spinnerWidget)
-            optWidgets.add(optWidget)
+            overrideWidgets.add(overrideWidget)
         }
     }
 
-    override val components = optWidgets.flatMap { widget -> widget.components }
-    override val constraints = optWidgets.flatMap { widget ->
+    override val components = overrideWidgets.flatMap { widget -> widget.components }
+    override val constraints = overrideWidgets.flatMap { widget ->
         listOf(widget.constraints[0] + ", newline") + widget.constraints.drop(1)
     }
 
@@ -1719,9 +1723,9 @@ class FontVariationsWidget : Form.AbstractWidget<FontVariations>(), Form.RowMana
             field = if (axes.size <= MAX_NUM_AXES) axes else axes.subList(0, MAX_NUM_AXES)
             for (idx in 0..<MAX_NUM_AXES) {
                 val isRowVisible = idx < axes.size
-                if (!isRowVisible && !optWidgets[idx].isVisible)
+                if (!isRowVisible && !overrideWidgets[idx].isVisible)
                     break
-                optWidgets[idx].isVisible = isRowVisible
+                overrideWidgets[idx].isVisible = isRowVisible
                 labelComps[idx].isVisible = isRowVisible
                 noticeIconComps[idx].isVisible = isRowVisible
                 noticeMsgComps[idx].isVisible = isRowVisible
@@ -1742,7 +1746,10 @@ class FontVariationsWidget : Form.AbstractWidget<FontVariations>(), Form.RowMana
                     withoutChangeListeners {
                         val stp = ceil((axis.maxValue - axis.minValue) / 100)
                         spinnerWidgets[idx].model = SpinnerNumberModel(axis.minValue, axis.minValue, axis.maxValue, stp)
-                        optWidgets[idx].value = rem.remove(axis.tag) ?: Opt(false, axis.defaultValue)
+                        overrideWidgets[idx].apply {
+                            defaultValue = axis.defaultValue
+                            value = Override(rem.remove(axis.tag))
+                        }
                     }
                 }
             }
@@ -1753,15 +1760,15 @@ class FontVariationsWidget : Form.AbstractWidget<FontVariations>(), Form.RowMana
 
     override var value: FontVariations
         get() =
-            FontVariations(persistentMapOf<String, Opt<Double>>().mutate { map ->
+            FontVariations(persistentMapOf<String, Double>().mutate { map ->
                 for ((idx, axis) in axes.withIndex())
-                    map[axis.tag] = optWidgets[idx].value
+                    overrideWidgets[idx].value.value?.let { map[axis.tag] = it }
                 map.putAll(stashedVariations)
             })
         set(value) {
             val rem = HashMap(value)
             for ((idx, axis) in axes.withIndex())
-                withoutChangeListeners { optWidgets[idx].value = rem.remove(axis.tag) ?: Opt(false, axis.defaultValue) }
+                withoutChangeListeners { overrideWidgets[idx].value = Override(rem.remove(axis.tag)) }
             stashedVariations = rem
             notifyChangeListeners()
         }
@@ -1980,48 +1987,115 @@ class TransitionWidget : Form.AbstractWidget<Transition>() {
 }
 
 
-class OptWidget<E : Any>(
+abstract class AbstractToggleableWidget<V : Any, E : Any>(
     val wrapped: Form.Widget<E>
-) : Form.AbstractWidget<Opt<E>>() {
+) : Form.AbstractWidget<V>() {
+
+    protected abstract val toggleComponent: JComponent
+    protected abstract val isActive: Boolean
+
+    protected fun onToggle() {
+        wrapped.isEnabled = toggleComponent.isEnabled && isActive
+        notifyChangeListeners()
+    }
 
     init {
-        // By default, the checkbox is deselected, so the wrapped widget needs to be disabled.
+        // By default, the toggle component is inactive, so the wrapped widget needs to be disabled.
         wrapped.isEnabled = false
-        // When the wrapped widget changes, notify this widget's change listeners that that widget has changed.
-        wrapped.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
     }
-
-    private val cb = LargeCheckBox(STD_HEIGHT).apply {
-        addItemListener {
-            wrapped.isEnabled = isSelected
-            notifyChangeListeners()
-        }
-    }
-
-    override val components = listOf(cb) + wrapped.components
-    override val constraints = listOf("") + wrapped.constraints
-
-    override var value: Opt<E>
-        get() = Opt(cb.isSelected, wrapped.value)
-        set(value) {
-            cb.isSelected = value.isActive
-            wrapped.value = value.value
-        }
 
     override fun applyVisible(isVisible: Boolean) {
-        cb.isVisible = isVisible
+        toggleComponent.isVisible = isVisible
         wrapped.isVisible = isVisible
     }
 
     override fun applyEnabled(isEnabled: Boolean) {
-        cb.isEnabled = isEnabled
-        wrapped.isEnabled = isEnabled && cb.isSelected
+        toggleComponent.isEnabled = isEnabled
+        wrapped.isEnabled = isEnabled && isActive
     }
 
     override fun applyConfigurator(configurator: (Form.Widget<*>) -> Unit) {
         configurator(this)
         wrapped.applyConfigurator(configurator)
     }
+
+}
+
+
+class OptWidget<E : Any>(
+    wrapped: Form.Widget<E>
+) : AbstractToggleableWidget<Opt<E>, E>(wrapped) {
+
+    init {
+        // When the wrapped widget changes, notify this widget's change listeners that that widget has changed.
+        wrapped.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
+    }
+
+    override val toggleComponent = LargeCheckBox(STD_HEIGHT).apply {
+        addItemListener { onToggle() }
+    }
+
+    override val components = listOf(toggleComponent) + wrapped.components
+    override val constraints = listOf("") + wrapped.constraints
+
+    override val isActive: Boolean
+        get() = toggleComponent.isSelected
+
+    override var value: Opt<E>
+        get() = Opt(toggleComponent.isSelected, wrapped.value)
+        set(value) {
+            toggleComponent.isSelected = value.isActive
+            wrapped.value = value.value
+        }
+
+}
+
+
+class OverrideWidget<E : Any>(
+    wrapped: Form.Widget<E>
+) : AbstractToggleableWidget<Override<E>, E>(wrapped) {
+
+    init {
+        // When the wrapped widget changes, notify this widget's change listeners that that widget has changed.
+        wrapped.changeListeners.add { widget ->
+            if (isActive)
+                notifyChangeListenersAboutOtherWidgetChange(widget)
+        }
+    }
+
+    override val toggleComponent = JButton(EDIT_ICON).apply {
+        addActionListener { isActive = !isActive }
+    }
+
+    override val components = wrapped.components + toggleComponent
+    override val constraints = wrapped.constraints + ""
+
+    override var isActive = false
+        set(isActive) {
+            if (field == isActive)
+                return
+            field = isActive
+            toggleComponent.icon = if (isActive) RESET_ICON else EDIT_ICON
+            if (!isActive)
+                defaultValue?.let { wrapped.value = it }
+            onToggle()
+        }
+
+    var defaultValue: E? = null
+        set(defaultValue) {
+            if (field == defaultValue)
+                return
+            field = defaultValue
+            if (!isActive && defaultValue != null)
+                wrapped.value = defaultValue
+        }
+
+    override var value: Override<E>
+        get() = Override(if (isActive) wrapped.value else null)
+        set(value) {
+            isActive = value.value != null
+            (value.value ?: defaultValue)?.let { wrapped.value = it }
+        }
 
 }
 

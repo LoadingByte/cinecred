@@ -6,7 +6,7 @@ import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.delivery.*
 import com.loadingbyte.cinecred.demo.*
 import com.loadingbyte.cinecred.project.Global
-import com.loadingbyte.cinecred.project.Opt
+import com.loadingbyte.cinecred.project.Override
 import com.loadingbyte.cinecred.project.PRESET_GLOBAL
 import com.loadingbyte.cinecred.project.st
 import com.loadingbyte.cinecred.ui.comms.CreditsId
@@ -15,6 +15,7 @@ import com.loadingbyte.cinecred.ui.comms.RenderFormatCategory
 import com.loadingbyte.cinecred.ui.comms.RenderJobInfo
 import com.loadingbyte.cinecred.ui.comms.RenderJobStatus
 import com.loadingbyte.cinecred.ui.helper.DropdownPopupMenuCheckBoxItem
+import com.loadingbyte.cinecred.ui.styling.OverrideWidgetSpec
 import java.awt.KeyboardFocusManager
 import java.lang.Thread.sleep
 import javax.swing.JTextField
@@ -144,10 +145,11 @@ object HomeCreditsRuntimeDemo : StyleSettingsDemo<Global>(
     listOf(Global::runtimeFrames.st()), pageScaling = 0.45, pageWidth = 900, pageHeight = 400
 ) {
     override fun styles() = buildList<Global> {
-        this += TEMPLATE_PROJECT.styling.global.copy(runtimeFrames = Opt(false, 1080))
-        this += last().copy(runtimeFrames = last().runtimeFrames.copy(isActive = true))
+        this += TEMPLATE_PROJECT.styling.global
+        this += last().copy(runtimeFrames = Override(1080))
     }
 
+    override val overrideCtx = OverrideWidgetSpec.Context(1247, emptyMap())
     override val suffixes = listOf("-natural", "-adjusted")
     override fun credits(style: Global) = Pair(style, listOf(TEMPLATE_SCROLL_PAGE_FROM_DOP))
 }

@@ -12,6 +12,7 @@ import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.*
+import com.loadingbyte.cinecred.ui.styling.OverrideWidgetSpec
 import com.loadingbyte.cinecred.ui.styling.StyleForm
 import com.loadingbyte.cinecred.ui.styling.StyleFormAdjuster
 import kotlinx.collections.immutable.toPersistentList
@@ -70,11 +71,13 @@ abstract class StyleSettingsDemo<S : Style>(
     protected open fun augmentStyling(styling: Styling): Styling = styling
     protected open val pictureLoaders: Collection<Picture.Loader> get() = emptyList()
     protected open val tapes: Collection<Tape> get() = emptyList()
+    protected open val overrideCtx: OverrideWidgetSpec.Context? get() = null
 
     final override fun doGenerate() {
         val styles = styles()
         val settImgs = renderStyleSettings(
-            settings, styles, { credits(it)?.let(::extractStyling) }, ::augmentStyling, pictureLoaders, tapes
+            settings, styles, { credits(it)?.let(::extractStyling) }, ::augmentStyling,
+            pictureLoaders, tapes, overrideCtx
         )
         val pageDefImgsAndGroundings =
             styles.mapNotNull(::credits).map { buildPageDefImgAndGrounding(it, ::augmentStyling, pageScaling) }
@@ -132,8 +135,8 @@ abstract class StyleSettingsVideoDemo<S : Style>(
     private fun generateTimeline(style: TapeStyle, video: DeferredVideo): Sequence<BufferedImage> {
         val timeframe = video.numFrames - (style.leftTemporalMarginFrames + style.rightTemporalMarginFrames)
         val avail = style.tape.tape!!.availableRange
-        val slice = (style.slice.outPoint.orElse { avail.endExclusive }.toFrames(video.fps).frames -
-                style.slice.inPoint.orElse { avail.start }.toFrames(video.fps).frames).coerceAtMost(timeframe)
+        val slice = ((style.slice.outPoint ?: avail.endExclusive).toFrames(video.fps).frames -
+                (style.slice.inPoint ?: avail.start).toFrames(video.fps).frames).coerceAtMost(timeframe)
         var leftMargin = style.leftTemporalMarginFrames
         if (style.temporallyJustify == HJustify.CENTER) leftMargin += (timeframe - slice) / 2
         if (style.temporallyJustify == HJustify.RIGHT) leftMargin += timeframe - slice
@@ -256,7 +259,8 @@ private fun <S : Style> renderStyleSettings(
     buildStyling: ((S) -> Styling?)?,
     augmentStyling: ((Styling) -> Styling)? = null,
     pictureLoaders: Collection<Picture.Loader> = emptyList(),
-    tapes: Collection<Tape> = emptyList()
+    tapes: Collection<Tape> = emptyList(),
+    overrideCtx: OverrideWidgetSpec.Context? = null
 ) = sequence<BufferedImage> {
     val styleClass = styles[0].javaClass
 
@@ -297,6 +301,7 @@ private fun <S : Style> renderStyleSettings(
     formAdjuster.activeForm = form
     formAdjuster.updatePictureLoaders(pictureLoaders.associateBy { it.file.name })
     formAdjuster.updateTapes(tapes.associateBy { it.fileOrDir.name })
+    formAdjuster.updateConstraintViolationsAndOverrideCtx(null, overrideCtx)
     sleep(500)
     edt { KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner() }
 

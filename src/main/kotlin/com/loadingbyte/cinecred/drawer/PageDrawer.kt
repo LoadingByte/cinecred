@@ -50,7 +50,7 @@ fun drawPages(styling: Styling, credits: Credits): Pair<List<DrawnPage>, List<Ru
 
     // If requested, adjust some vertical gaps to best match a specified runtime.
     var crushedRuntimeGroups: List<RuntimeGroup?> = emptyList()
-    if (runtimeGroups.isNotEmpty() || global.runtimeFrames.isActive) {
+    if (runtimeGroups.isNotEmpty() || global.runtimeFrames.value != null) {
         // Run a first layout pass to determine how many frames each scrolling stage will scroll for.
         val prelimStageLayouts = HashMap<Stage, StageLayout>()
         for (page in pages)
@@ -255,7 +255,7 @@ private fun matchRuntime(
     var globalGroup: RuntimeGroup? = null
     var globalGroupFrames = 0
     val remStages = buildList { for (p in pages) for (s in p.stages) if (runtimeGroups.none { s in it.stages }) add(s) }
-    if (global.runtimeFrames.isActive) {
+    if (global.runtimeFrames.value != null) {
         // Subtract the blank first and last frames, the desired runtime of the user-defined runtime groups, and the
         // runtime in between pages from the desired global runtime to obtain the desired runtime of the new group.
         globalGroupFrames = global.runtimeFrames.value -

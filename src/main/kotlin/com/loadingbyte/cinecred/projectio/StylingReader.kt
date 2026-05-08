@@ -118,6 +118,8 @@ private fun <S : Style, SUBJ : Any> readSetting(
             setting.notarize(convert(ctx, setting.type, raw))
         is OptStyleSetting ->
             setting.notarize(Opt(true, convert(ctx, setting.type, raw)))
+        is OverrideStyleSetting ->
+            setting.notarize(Override(convert(ctx, setting.type, raw)))
         is ListStyleSetting ->
             setting.notarize((raw as List<*>).filterNotNull().map { convert(ctx, setting.type, it) }.toPersistentList())
     }
@@ -154,7 +156,7 @@ private fun fontVariationsFromKVs(kvs: List<String>): FontVariations =
     FontVariations(kvs.associate { kv ->
         val parts = kv.split("=")
         require(parts.size == 2)
-        parts[0] to Opt(true, parts[1].toDouble())
+        parts[0] to parts[1].toDouble()
     }.toPersistentMap())
 
 private fun fontFeatureFromKV(kv: String): FontFeature {
@@ -170,20 +172,19 @@ private fun tapeSliceFromStr(str: String): TapeSlice {
     val tcStrs = str.split("-")
     require(tcStrs.size == 2)
     for (tcFmt in TimecodeFormat.entries) {
-        val tcOpts = try {
+        val tcs = try {
             tcStrs.map { tcStr ->
                 if (tcStr.isBlank())
                     null
                 else if (tcFmt == TimecodeFormat.CLOCK && "/" in tcStr)
-                    Opt(true, tcStr.split("/").let { Timecode.Clock(it[0].toLong(), it[1].toLong()) })
+                    tcStr.split("/").let { Timecode.Clock(it[0].toLong(), it[1].toLong()) }
                 else
-                    Opt(true, parseTimecode(tcFmt, tcStr))
+                    parseTimecode(tcFmt, tcStr)
             }
         } catch (_: RuntimeException) {
             continue
         }
-        val zeroOpt = Opt(false, zeroTimecode((tcOpts[0] ?: tcOpts[1])!!.value.format))
-        return TapeSlice(tcOpts[0] ?: zeroOpt, tcOpts[1] ?: zeroOpt)
+        return TapeSlice((tcs[0] ?: tcs[1])!!.format, tcs[0], tcs[1])
     }
     throw IllegalArgumentException()
 }

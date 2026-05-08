@@ -266,6 +266,7 @@ class StylingConsistencyRetainer<S : ListedStyle>(styling: Styling, editedStyle:
             when (val st = trackSt.setting) {
                 is DirectStyleSetting -> st.notarize(newName)
                 is OptStyleSetting -> st.notarize(Opt(true, newName))
+                is OverrideStyleSetting -> st.notarize(Override(newName))
                 is ListStyleSetting -> st.notarize(TreeSet(trackSt.baseItems).apply { add(newName) }.toPersistentList())
             }
         }

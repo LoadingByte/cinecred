@@ -9,6 +9,7 @@ import com.loadingbyte.cinecred.demo.TEMPLATE_SCROLL_PAGE_FROM_DOP
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.project.*
+import com.loadingbyte.cinecred.ui.styling.OverrideWidgetSpec
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import java.util.*
@@ -46,11 +47,13 @@ object GuideProjectSettingsTimecodeFormatDemo : StyleSettingsDemo<Global>(
     listOf(Global::fps.st(), Global::timecodeFormat.st(), Global::runtimeFrames.st())
 ) {
     override fun styles() = buildList<Global> {
-        this += PRESET_GLOBAL.copy(fps = FPS(30, 1), runtimeFrames = Opt(false, 3284))
+        this += PRESET_GLOBAL.copy(fps = FPS(30, 1))
         this += last().copy(timecodeFormat = TimecodeFormat.FRAMES)
         this += last().copy(fps = FPS(30000, 1001), timecodeFormat = TimecodeFormat.SMPTE_DROP_FRAME)
         this += last().copy(timecodeFormat = TimecodeFormat.EXACT_FRAMES_IN_SECOND)
     }
+
+    override val overrideCtx = OverrideWidgetSpec.Context(3284, emptyMap())
 }
 
 
@@ -59,10 +62,11 @@ object GuideProjectSettingsRuntimeFineAdjustmentDemo : StyleSettingsDemo<Global>
     listOf(Global::runtimeFrames.st()), pageScaling = 0.45, pageHeight = 400
 ) {
     override fun styles() = buildList<Global> {
-        this += TEMPLATE_PROJECT.styling.global.copy(runtimeFrames = Opt(false, 1092))
-        this += last().copy(runtimeFrames = last().runtimeFrames.copy(isActive = true))
+        this += TEMPLATE_PROJECT.styling.global
+        this += last().copy(runtimeFrames = Override(1080))
     }
 
+    override val overrideCtx = OverrideWidgetSpec.Context(1247, emptyMap())
     override fun credits(style: Global) = Pair(style, listOf(TEMPLATE_SCROLL_PAGE_FROM_DOP))
 }
 

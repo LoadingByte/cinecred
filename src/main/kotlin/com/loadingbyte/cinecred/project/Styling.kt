@@ -80,7 +80,7 @@ data class Global(
     val resolution: Resolution,
     val fps: FPS,
     val timecodeFormat: TimecodeFormat,
-    val runtimeFrames: Opt<Int>,
+    val runtimeFrames: Override<Int>,
     val blankFirstFrame: Boolean,
     val blankLastFrame: Boolean,
     val grounding: Color4f,
@@ -104,7 +104,7 @@ data class PageStyle(
     /** Only retained for backwards compatibility. */
     val scrollMeltWithNext: Boolean,
     val scrollPxPerFrame: Double,
-    val scrollRuntimeFrames: Opt<Int>
+    val scrollRuntimeFrames: Override<Int>
 ) : ListedStyle
 
 
@@ -270,8 +270,7 @@ data class FontRef(val name: String) {
 }
 
 
-data class FontVariations(private val map: PersistentMap<String, Opt<Double>>) :
-    PersistentMap<String, Opt<Double>> by map
+data class FontVariations(private val map: PersistentMap<String, Double>) : PersistentMap<String, Double> by map
 
 
 data class FontFeature(
@@ -342,8 +341,8 @@ data class PictureStyle(
     override val name: String,
     override val volatile: Boolean,
     val picture: PictureRef,
-    val widthPx: Opt<Double>,
-    val heightPx: Opt<Double>,
+    val widthPx: Override<Double>,
+    val heightPx: Override<Double>,
     val cropLeftPx: Double,
     val cropRightPx: Double,
     val cropTopPx: Double,
@@ -371,8 +370,8 @@ data class TapeStyle(
     override val name: String,
     override val volatile: Boolean,
     val tape: TapeRef,
-    val widthPx: Opt<Int>,
-    val heightPx: Opt<Int>,
+    val widthPx: Override<Int>,
+    val heightPx: Override<Int>,
     val cropLeftPx: Int,
     val cropRightPx: Int,
     val cropTopPx: Int,
@@ -404,17 +403,28 @@ data class TapeRef(val name: String) {
 }
 
 
-data class TapeSlice(
-    val inPoint: Opt<Timecode>,
-    val outPoint: Opt<Timecode>
+class TapeSlice(
+    val timecodeFormat: TimecodeFormat,
+    val inPoint: Timecode?,
+    val outPoint: Timecode?
 ) {
+
     init {
-        require(inPoint.value.javaClass == outPoint.value.javaClass)
+        require(inPoint == null || inPoint.format == timecodeFormat)
+        require(outPoint == null || outPoint.format == timecodeFormat)
     }
+
+    override fun equals(other: Any?) =
+        this === other || other is TapeSlice && inPoint == other.inPoint && outPoint == other.outPoint
+
+    override fun hashCode() = 31 * (inPoint?.hashCode() ?: 0) + (outPoint?.hashCode() ?: 0)
+    override fun toString() = "TapeSlice(inPoint=$inPoint, outPoint=$outPoint)"
+
 }
 
 
 data class Opt<out E : Any /* non-null */>(val isActive: Boolean, val value: E)
+data class Override<out E : Any /* non-null */>(val value: E?)
 
 inline fun <E : Any> Opt<E>.orElse(block: () -> E): E = if (isActive) value else block()
 

@@ -104,6 +104,8 @@ class StyleForm<S : Style>(
                 makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs)
             is OptStyleSetting ->
                 OptWidget(makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs))
+            is OverrideStyleSetting ->
+                OverrideWidget(makeBackingSettingWidget(setting, settingConstraints, settingWidgetSpecs))
             is ListStyleSetting ->
                 makeListWidget(setting, settingConstraints, settingWidgetSpecs)
         }
@@ -378,6 +380,10 @@ class StyleForm<S : Style>(
     fun getWidgetFor(setting: StyleSetting<S, *>): Widget<*> =
         valueWidgets.getValue(setting)
 
+    fun <SUBJ : Any> getWidgetFor(setting: OverrideStyleSetting<S, SUBJ>): OverrideWidget<SUBJ> =
+        @Suppress("UNCHECKED_CAST")
+        (valueWidgets.getValue(setting) as OverrideWidget<SUBJ>)
+
     fun getFormRowFor(setting: StyleSetting<S, *>): FormRow? =
         rootFormRowLookup[setting]
 
@@ -397,10 +403,7 @@ class StyleForm<S : Style>(
         }
     }
 
-    fun <SUBJ : Any> openSingleSetting(setting: DirectStyleSetting<S, SUBJ>, value: SUBJ) = openSingle(setting, value)
-    fun <SUBJ : Any> openSingleSetting(setting: OptStyleSetting<S, SUBJ>, value: Opt<SUBJ>) = openSingle(setting, value)
-
-    private fun openSingle(setting: StyleSetting<S, *>, value: Any) {
+    fun <SUBJ : Any> openSingleSetting(setting: DirectStyleSetting<S, SUBJ>, value: SUBJ) {
         disableOnChange = true
         try {
             @Suppress("UNCHECKED_CAST")
@@ -431,6 +434,11 @@ class StyleForm<S : Style>(
                     }
                     is OptStyleSetting -> {
                         val formWidget = (valueWidgets[setting] as OptWidget<*>).wrapped as NestedFormWidget
+                        nestedForms.add(formWidget.form as StyleForm)
+                        nestedStyles.add(setting.get(style).value as NestedStyle)
+                    }
+                    is OverrideStyleSetting -> {
+                        val formWidget = (valueWidgets[setting] as OverrideWidget<*>).wrapped as NestedFormWidget
                         nestedForms.add(formWidget.form as StyleForm)
                         nestedStyles.add(setting.get(style).value as NestedStyle)
                     }

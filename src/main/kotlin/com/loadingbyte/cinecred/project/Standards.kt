@@ -1,6 +1,9 @@
 package com.loadingbyte.cinecred.project
 
-import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.common.FPS
+import com.loadingbyte.cinecred.common.Resolution
+import com.loadingbyte.cinecred.common.TimecodeFormat
+import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.Font
 import com.loadingbyte.cinecred.imaging.Transition
@@ -27,7 +30,7 @@ val PRESET_GLOBAL = Global(
     resolution = Resolution(2048, 858),
     fps = FPS(24, 1),
     timecodeFormat = TimecodeFormat.SMPTE_NON_DROP_FRAME,
-    runtimeFrames = Opt(false, 0),
+    runtimeFrames = Override(null),
     blankFirstFrame = false,
     blankLastFrame = false,
     grounding = Color4f.BLACK,
@@ -54,7 +57,7 @@ val PRESET_PAGE_STYLE = PageStyle(
     scrollMeltWithPrev = false,
     scrollMeltWithNext = false,
     scrollPxPerFrame = 3.0,
-    scrollRuntimeFrames = Opt(false, 0)
+    scrollRuntimeFrames = Override(null)
 )
 
 
@@ -224,8 +227,8 @@ val PRESET_PICTURE_STYLE = PictureStyle(
     name = "???",
     volatile = false,
     picture = PictureRef(""),
-    widthPx = Opt(false, 0.0),
-    heightPx = Opt(false, 0.0),
+    widthPx = Override(null),
+    heightPx = Override(null),
     cropLeftPx = 0.0,
     cropRightPx = 0.0,
     cropTopPx = 0.0,
@@ -241,8 +244,8 @@ val PRESET_TAPE_STYLE = TapeStyle(
     name = "???",
     volatile = false,
     tape = TapeRef(""),
-    widthPx = Opt(false, 0),
-    heightPx = Opt(false, 0),
+    widthPx = Override(null),
+    heightPx = Override(null),
     cropLeftPx = 0,
     cropRightPx = 0,
     cropTopPx = 0,
@@ -250,7 +253,7 @@ val PRESET_TAPE_STYLE = TapeStyle(
     hFlip = false,
     vFlip = false,
     rotationDeg = 0,
-    slice = TapeSlice(Opt(false, Timecode.SMPTENonDropFrame(0, 0)), Opt(false, Timecode.SMPTENonDropFrame(0, 0))),
+    slice = TapeSlice(TimecodeFormat.SMPTE_NON_DROP_FRAME, null, null),
     loop = false,
     temporallyJustify = HJustify.LEFT,
     leftTemporalMarginFrames = 0,

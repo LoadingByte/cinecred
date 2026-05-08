@@ -97,11 +97,6 @@ class EditStylingPanel(private val ctrl: ProjectController) :
 
     private var blockStylingHistoryUpdates = 0
 
-    // Remember the runtime of the latest render of the project, as well as the runtime of the first occurrences of
-    // individual scroll styles.
-    private var mostRecentRuntime = 0
-    private val mostRecentScrollRuntimes = HashMap<String, Int>()
-
     init {
         stylingTree.onDeselect = ::openBlank
         stylingTree.addSingletonType(
@@ -339,16 +334,7 @@ class EditStylingPanel(private val ctrl: ProjectController) :
         // it here nevertheless for symmetry with the openListedStyle() method.
         form.changeListeners.clear()
         form.changeListeners.add { widget ->
-            var newStyle = form.save()
-            // If certain settings are 0 and have now been activated, initialize them.
-            for (spec in getStyleWidgetSpecs(newStyle.javaClass))
-                if (spec is ZeroInitWidgetSpec<Global, *> && performZeroInit(newStyle, form, spec))
-                    newStyle = form.save()
-            // If the global runtime setting is 0 and has now been activated, initialize the corresponding timecode
-            // spinner with the project's current runtime. This is to provide a good starting value for the user.
-            if (performZeroInit(newStyle, form, ZeroInitWidgetSpec(Global::runtimeFrames.st()) { mostRecentRuntime }))
-                newStyle = form.save()
-            stylingTree.setSingleton(newStyle)
+            stylingTree.setSingleton(form.save())
             styling = buildStyling()
             onChange(widget)
         }
@@ -365,17 +351,6 @@ class EditStylingPanel(private val ctrl: ProjectController) :
                 form.castToStyle(PopupStyle::class.java).openSingleSetting(PopupStyle::volatile.st(), false)
                 newStyle = form.save()
             }
-            // If certain settings are 0 and have now been activated, initialize them.
-            for (spec in getStyleWidgetSpecs(newStyle.javaClass))
-                if (spec is ZeroInitWidgetSpec<S, *> && performZeroInit(newStyle, form, spec))
-                    newStyle = form.save()
-            // If the scroll page runtime setting is 0 and has now been activated, initialize the corresponding timecode
-            // spinner with the scroll page's current runtime. This is to provide a good starting value for the user.
-            if (newStyle is PageStyle && performZeroInit(
-                    newStyle, form.castToStyle(PageStyle::class.java),
-                    ZeroInitWidgetSpec(PageStyle::scrollRuntimeFrames.st()) { mostRecentScrollRuntimes[newStyle.name] })
-            )
-                newStyle = form.save()
             stylingTree.updateListElement(style.javaClass.cast(stylingTree.selected), newStyle)
             styling = buildStyling()
             val updates = consistencyRetainer.ensureConsistencyAfterEdit(styling!!, newStyle)
@@ -407,19 +382,6 @@ class EditStylingPanel(private val ctrl: ProjectController) :
         stylingTree.getList(TapeStyle::class.java).toPersistentList()
     )
 
-    private fun <S : Style, SUBJ : Number> performZeroInit(
-        style: S, form: StyleForm<S>, spec: ZeroInitWidgetSpec<S, SUBJ>
-    ): Boolean {
-        var initializedAny = false
-        for (setting in spec.settings)
-            if (setting.get(style).run { isActive && value.toDouble() == 0.0 })
-                spec.getInitialValue(style)?.let { value ->
-                    form.openSingleSetting(setting, Opt(true, value))
-                    initializedAny = true
-                }
-        return initializedAny
-    }
-
     fun setStyling(styling: Styling) {
         this.styling = styling
 
@@ -445,8 +407,6 @@ class EditStylingPanel(private val ctrl: ProjectController) :
     }
 
     fun updateProject(drawnProject: DrawnProject, externalConstraintViolations: List<ConstraintViolation>) {
-        formAdjuster.updateExtraConstraintViolations(externalConstraintViolations)
-
         // Only update the grayed-out status of styles if the DrawnProject we received stems from the current Styling.
         // If it doesn't, the Styling has changed again in the meantime, and we can't compare with the outdated usage
         // information because the identity of the styles has changed since then. If we didn't have this check, rapidly
@@ -456,15 +416,23 @@ class EditStylingPanel(private val ctrl: ProjectController) :
             stylingTree.adjustAppearance(isGrayedOut = { it is ListedStyle && it !in usedStyles })
         }
 
-        drawnProject.drawnCreditsBooks.firstOrNull()?.drawnCredits?.firstOrNull()
-            ?.let { mostRecentRuntime = it.video.numFrames }
+        // Find the runtime of the first credits sequence.
+        val runtime = drawnProject.drawnCreditsBooks.firstOrNull()?.drawnCredits?.firstOrNull()
+            ?.video?.numFrames ?: 0
 
+        // Find the runtime of the first occurrences of each individual scroll style.
+        val scrollStyleRuntimes = HashMap<String, Int>()
         for (drawnCreditsBook in drawnProject.drawnCreditsBooks)
             for (drawnCredits in drawnCreditsBook.drawnCredits)
                 for (drawnPage in drawnCredits.drawnPages)
                     for ((stage, stageInfo) in drawnPage.page.stages.zip(drawnPage.stageInfo))
                         if (stageInfo is DrawnStageInfo.Scroll)
-                            mostRecentScrollRuntimes.putIfAbsent(stage.style.name, stageInfo.frames)
+                            scrollStyleRuntimes.putIfAbsent(stage.style.name, stageInfo.frames)
+
+        formAdjuster.updateExtraConstraintViolationsAndOverrideCtx(
+            externalConstraintViolations,
+            OverrideWidgetSpec.Context(runtime, scrollStyleRuntimes)
+        )
     }
 
     private fun updateConstraintViolations(constraintViolations: List<ConstraintViolation>) {

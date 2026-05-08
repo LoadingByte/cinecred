@@ -50,6 +50,11 @@ private fun <S : Style> writeStyle(styling: Styling, style: S): Map<String, Any>
                     if (opt.isActive)
                         convert(styling, opt.value)?.let { toml[setting.name] = it }
                 }
+                is OverrideStyleSetting -> {
+                    val value = setting.get(style).value
+                    if (value != null)
+                        convert(styling, value)?.let { toml[setting.name] = it }
+                }
                 is ListStyleSetting -> {
                     val list = setting.get(style)
                     // If the list is empty, we can skip writing an empty list only if the preset list is empty too.
@@ -73,12 +78,11 @@ private fun convert(styling: Styling, value: Any): Any? = when (value) {
     is FontRef -> value.name
     is PictureRef -> value.name
     is TapeRef -> value.name
-    is FontVariations -> value.ifEmpty { null }?.mapNotNull { (tag, o) -> if (o.isActive) "$tag=${o.value}" else null }
+    is FontVariations -> value.ifEmpty { null }?.map { (tag, value) -> "$tag=$value" }
     is FontFeature -> "${value.tag}=${value.value}"
     is Transition -> listOf(value.ctrl1X, value.ctrl1Y, value.ctrl2X, value.ctrl2Y)
-    is TapeSlice -> listOf(value.inPoint, value.outPoint).joinToString("-") {
-        val v = it.value
-        if (!it.isActive) "" else if (v is Timecode.Clock) "${v.numerator}/${v.denominator}" else v.toString()
+    is TapeSlice -> listOf(value.inPoint, value.outPoint).joinToString("-") { tc ->
+        if (tc == null) "" else if (tc is Timecode.Clock) "${tc.numerator}/${tc.denominator}" else tc.toString()
     }.let { if (it.length == 1) null else it }
     is Style -> writeStyle(styling, value)
     else -> throw UnsupportedOperationException("Writing objects of type ${value.javaClass.name} is not supported.")

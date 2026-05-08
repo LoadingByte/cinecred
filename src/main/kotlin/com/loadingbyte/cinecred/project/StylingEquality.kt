@@ -76,11 +76,10 @@ private inline fun <E> List<E>.endOfRange(startIdx: Int, predicate: (E) -> Boole
 
 
 fun Style.equalsIgnoreIneffectiveSettings(styling: Styling, other: Style): Boolean {
-    fun eq(v1: Any, v2: Any): Boolean =
+    fun eq(v1: Any?, v2: Any?): Boolean =
         when {
             v1 is Style && v2 is Style -> v1.equalsIgnoreIneffectiveSettings(styling, v2)
             v1 is Opt<*> && v2 is Opt<*> -> v1.isActive == v2.isActive && (!v1.isActive || eq(v1.value, v2.value))
-            v1 is FontVariations && v2 is FontVariations -> equalsInOneDirection(v1, v2) && equalsInOneDirection(v2, v1)
             v1 is TapeSlice && v2 is TapeSlice -> eq(v1.inPoint, v2.inPoint) && eq(v1.outPoint, v2.outPoint)
             else -> v1 == v2
         }
@@ -93,7 +92,7 @@ fun Style.equalsIgnoreIneffectiveSettings(styling: Styling, other: Style): Boole
     for (setting in getStyleSettings(javaClass))
         if (setting !in excludedSettings)
             when (setting) {
-                is DirectStyleSetting, is OptStyleSetting ->
+                is DirectStyleSetting, is OptStyleSetting, is OverrideStyleSetting ->
                     if (!eq(setting.get(this), setting.get(other)))
                         return false
                 is ListStyleSetting -> {
@@ -108,6 +107,3 @@ fun Style.equalsIgnoreIneffectiveSettings(styling: Styling, other: Style): Boole
             }
     return true
 }
-
-private fun equalsInOneDirection(v1: FontVariations, v2: FontVariations): Boolean =
-    v1.all { (tag, o1) -> !o1.isActive || v2[tag].let { o2 -> o2 != null && o2.isActive && o1.value == o2.value } }

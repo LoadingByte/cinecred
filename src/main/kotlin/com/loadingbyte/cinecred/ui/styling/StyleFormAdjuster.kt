@@ -30,6 +30,8 @@ class StyleFormAdjuster(
     }
     // =========================================
 
+    // Save the externally provided override context, and initialize it with a dummy one.
+    private var overrideCtx = OverrideWidgetSpec.Context(0, emptyMap())
     // Save the externally provided constraint violations.
     private var extraConstraintViolations: List<ConstraintViolation> = emptyList()
     // Cache the current Styling's constraint violations and all colors used in the current Styling.
@@ -80,12 +82,18 @@ class StyleFormAdjuster(
                     form.setChoices(setting, choices)
     }
 
-    fun updateExtraConstraintViolations(violations: List<ConstraintViolation>) {
-        if (extraConstraintViolations == violations)
-            return
-        extraConstraintViolations = violations
-        notifyConstraintViolations(constraintViolations + extraConstraintViolations)
-        adjustActiveForm()
+    fun updateExtraConstraintViolationsAndOverrideCtx(
+        violations: List<ConstraintViolation>,
+        overrideCtx: OverrideWidgetSpec.Context
+    ) {
+        val violationsChanged = this.extraConstraintViolations != violations
+        if (violationsChanged)
+            notifyConstraintViolations(constraintViolations + violations)
+        if (violationsChanged || this.overrideCtx != overrideCtx) {
+            this.extraConstraintViolations = violations
+            this.overrideCtx = overrideCtx
+            adjustActiveForm()
+        }
     }
 
     private fun refreshConstraintViolations() {
@@ -204,6 +212,8 @@ class StyleFormAdjuster(
                 for (setting in spec.settings)
                     curForm.setTimecodeFPSAndFormat(setting, fps, timecodeFormat)
             }
+            is OverrideWidgetSpec<S, *> ->
+                updateDefaultValue(curForm, curStyle, spec)
             else -> {}
         }
 
@@ -225,6 +235,13 @@ class StyleFormAdjuster(
                 curStyleIdx = idx,
                 siblingStyles = nestedStyles
             )
+    }
+
+    private fun <S : Style, SUBJ : Any> updateDefaultValue(
+        curForm: StyleForm<S>, curStyle: S, spec: OverrideWidgetSpec<S, SUBJ>
+    ) {
+        for (setting in spec.settings)
+            curForm.getWidgetFor(setting).defaultValue = spec.getDefaultValue(overrideCtx, curStyle)
     }
 
 

@@ -88,8 +88,7 @@ private class CreditsReader(
             } catch (_: IllegalArgumentException) {
                 null
             } ?: TimecodeFormat.EXACT_FRAMES_IN_SECOND
-            val pt = Opt(false, zeroTimecode(tcFmt))
-            PRESET_TAPE_STYLE.copy(name = name, tape = TapeRef(tape), slice = TapeSlice(pt, pt))
+            PRESET_TAPE_STYLE.copy(name = name, tape = TapeRef(tape), slice = TapeSlice(tcFmt, null, null))
         }
     )
 
@@ -247,7 +246,7 @@ private class CreditsReader(
                         )
                         runtimeGroupsWithSources[sheetGroupName ?: stage] =
                             Pair(RuntimeGroup(persistentListOf(stage), sheetFrames), source)
-                    } else if (stageStyle.scrollRuntimeFrames.isActive) {
+                    } else if (stageStyle.scrollRuntimeFrames.value != null) {
                         val source = RuntimeGroupSource.Style(stageStyle)
                         runtimeGroupsWithSources[stage] =
                             Pair(RuntimeGroup(persistentListOf(stage), stageStyle.scrollRuntimeFrames.value), source)
@@ -909,8 +908,8 @@ private class CreditsReader(
                         // Crop the picture.
                         hint in CROP_KW -> style.copy(cropBlankSpace = true)
                         // Apply scaling hints.
-                        hint.startsWith('x') -> style.copy(heightPx = Opt(true, hint.drop(1).toDouble()))
-                        hint.endsWith('x') -> style.copy(widthPx = Opt(true, hint.dropLast(1).toDouble()))
+                        hint.startsWith('x') -> style.copy(heightPx = Override(hint.drop(1).toDouble()))
+                        hint.endsWith('x') -> style.copy(widthPx = Override(hint.dropLast(1).toDouble()))
                         else -> continue
                     }
                 } catch (_: IllegalArgumentException) {
@@ -981,11 +980,10 @@ private class CreditsReader(
                                 continue
                             }
                             val slice = style.slice
-                            val z = Opt(false, zeroTimecode(tcFmt))
-                            val i = if (isIn) Opt(true, tc) else if (slice.inPoint.isActive) slice.inPoint else z
-                            val o = if (isOut) Opt(true, tc) else if (slice.outPoint.isActive) slice.outPoint else z
+                            val i = if (isIn) tc else slice.inPoint
+                            val o = if (isOut) tc else slice.outPoint
                             try {
-                                style = style.copy(slice = TapeSlice(i, o))
+                                style = style.copy(slice = TapeSlice(tcFmt, i, o))
                             } catch (_: IllegalArgumentException) {
                             }
                             break
@@ -997,8 +995,8 @@ private class CreditsReader(
                     style = try {
                         when {
                             // Apply scaling hints.
-                            hint.startsWith('x') -> style.copy(heightPx = Opt(true, hint.drop(1).toInt()))
-                            hint.endsWith('x') -> style.copy(widthPx = Opt(true, hint.dropLast(1).toInt()))
+                            hint.startsWith('x') -> style.copy(heightPx = Override(hint.drop(1).toInt()))
+                            hint.endsWith('x') -> style.copy(widthPx = Override(hint.dropLast(1).toInt()))
                             else -> continue
                         }
                     } catch (_: IllegalArgumentException) {

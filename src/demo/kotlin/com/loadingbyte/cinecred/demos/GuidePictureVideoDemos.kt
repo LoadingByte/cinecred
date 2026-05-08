@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.demos
 
-import com.loadingbyte.cinecred.common.Timecode
+import com.loadingbyte.cinecred.common.Timecode.SMPTENonDropFrame
+import com.loadingbyte.cinecred.common.TimecodeFormat.SMPTE_NON_DROP_FRAME
 import com.loadingbyte.cinecred.common.l10n
 import com.loadingbyte.cinecred.common.useResourcePath
 import com.loadingbyte.cinecred.demo.*
@@ -168,8 +169,8 @@ object GuidePictureVideoResolutionDemo : StyleSettingsDemo<PictureStyle>(
 ) {
     override fun styles() = buildList<PictureStyle> {
         this += PIC_STYLE
-        this += last().copy(widthPx = Opt(true, 150.0))
-        this += last().copy(heightPx = Opt(true, 220.0))
+        this += last().copy(widthPx = Override(150.0))
+        this += last().copy(heightPx = Override(220.0))
     }
 
     override fun credits(style: PictureStyle) = PIC_SPREADSHEET.parseCreditsPiS(style)
@@ -216,7 +217,7 @@ object GuidePictureVideoPictureCropBlankSpaceDemo : StyleSettingsDemo<PictureSty
     listOf(PictureStyle::cropBlankSpace.st()), pageGuides = true
 ) {
     override fun styles() = buildList<PictureStyle> {
-        this += PIC_STYLE.copy(widthPx = Opt(true, 128.0), rotationDeg = 25.0)
+        this += PIC_STYLE.copy(widthPx = Override(128.0), rotationDeg = 25.0)
         this += last().copy(cropBlankSpace = true)
     }
 
@@ -241,8 +242,8 @@ object GuidePictureVideoVideoSliceDemo : StyleSettingsVideoDemo<TapeStyle>(
 ) {
     override fun styles() = buildList<TapeStyle> {
         this += TAPE_STYLE
-        this += last().copy(slice = TapeSlice(Opt(true, Timecode.SMPTENonDropFrame(3, 10)), last().slice.outPoint))
-        this += last().copy(slice = TapeSlice(last().slice.inPoint, Opt(true, Timecode.SMPTENonDropFrame(5, 20))))
+        this += last().copy(slice = TapeSlice(SMPTE_NON_DROP_FRAME, SMPTENonDropFrame(3, 10), last().slice.outPoint))
+        this += last().copy(slice = TapeSlice(SMPTE_NON_DROP_FRAME, last().slice.inPoint, SMPTENonDropFrame(5, 20)))
     }
 
     override fun credits(style: TapeStyle) = TAPE_SPREADSHEET.parseCreditsTS(style)
@@ -267,7 +268,7 @@ object GuidePictureVideoVideoTemporallyJustifyDemo : StyleSettingsVideoDemo<Tape
 ) {
     override fun styles() = buildList<TapeStyle> {
         this += TAPE_STYLE.copy(
-            slice = TapeSlice(Opt(true, Timecode.SMPTENonDropFrame(0, 0)), Opt(true, Timecode.SMPTENonDropFrame(3, 0))),
+            slice = TapeSlice(SMPTE_NON_DROP_FRAME, SMPTENonDropFrame(0, 0), SMPTENonDropFrame(3, 0)),
             temporallyJustify = HJustify.LEFT
         )
         this += last().copy(temporallyJustify = HJustify.CENTER)

@@ -29,6 +29,8 @@ Cinecred Changelog
 - Embedded videos can now loop.
 - The preview resolution of embedded videos is now configurable.
 - The credits runtime can now be copied to the clipboard by clicking on it.
+- Overridable quantities like total runtime or picture width now continuously
+  update in the UI while they are not overridden.
 - If vertical gaps are fully crushed due to a runtime fine adjustment in the
   styling or spreadsheet, a warning is now emitted.
 - PDF exports now subset their embedded fonts, drastically reducing file size.

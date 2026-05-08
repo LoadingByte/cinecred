@@ -32,6 +32,10 @@ private val GLOBAL_WIDGET_SPECS: List<StyleWidgetSpec<Global, *>> = listOf(
         getFPS = { _, global -> global.fps },
         getTimecodeFormat = { _, global -> global.timecodeFormat }
     ),
+    OverrideWidgetSpec(
+        Global::runtimeFrames.st(),
+        getDefaultValue = { ctx, _ -> ctx.mostRecentRuntimeFrames }
+    ),
     WidthWidgetSpec(Global::uppercaseExceptions.st(), WidthSpec.NARROW)
 )
 
@@ -52,6 +56,10 @@ private val PAGE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PageStyle, *>> = listO
     UnionWidgetSpec(
         PageStyle::cardFadeOutFrames.st(), PageStyle::cardFadeOutTransitionStyleName.st(),
         unionName = "cardFadeOut", settingIcons = listOf(null, TRANSITION_ICON)
+    ),
+    OverrideWidgetSpec(
+        PageStyle::scrollRuntimeFrames.st(),
+        getDefaultValue = { ctx, style -> ctx.mostRecentScrollStyleRuntimeFrames.getOrDefault(style.name, 0) }
     )
 )
 
@@ -379,17 +387,17 @@ private val LAYER_WIDGET_SPECS: List<StyleWidgetSpec<Layer, *>> = listOf(
 
 
 private val PICTURE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PictureStyle, *>> = listOf(
-    WidthWidgetSpec(PictureStyle::widthPx.st(), WidthSpec.LITTLE),
-    WidthWidgetSpec(PictureStyle::heightPx.st(), WidthSpec.LITTLE),
+    WidthWidgetSpec(PictureStyle::widthPx.st(), WidthSpec.NARROW),
+    WidthWidgetSpec(PictureStyle::heightPx.st(), WidthSpec.NARROW),
     UnionWidgetSpec(
         PictureStyle::widthPx.st(), PictureStyle::heightPx.st(),
         unionName = "resolution", unionUnit = "px", settingIcons = listOf(SIZE_WIDTH_ICON, SIZE_HEIGHT_ICON)
     ),
-    ZeroInitWidgetSpec(PictureStyle::widthPx.st()) { style ->
-        basicEmbeddedPic(style, null, if (style.heightPx.isActive) style.heightPx.value else null)?.widthBeforeRotation
+    OverrideWidgetSpec(PictureStyle::widthPx.st()) { _, style ->
+        basicEmbeddedPic(style, null, style.heightPx.value)?.widthBeforeRotation ?: 0.0
     },
-    ZeroInitWidgetSpec(PictureStyle::heightPx.st()) { style ->
-        basicEmbeddedPic(style, if (style.widthPx.isActive) style.widthPx.value else null, null)?.heightBeforeRotation
+    OverrideWidgetSpec(PictureStyle::heightPx.st()) { _, style ->
+        basicEmbeddedPic(style, style.widthPx.value, null)?.heightBeforeRotation ?: 0.0
     },
     WidthWidgetSpec(PictureStyle::cropLeftPx.st(), WidthSpec.TINY),
     WidthWidgetSpec(PictureStyle::cropRightPx.st(), WidthSpec.TINY),
@@ -429,13 +437,11 @@ private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listO
         TapeStyle::widthPx.st(), TapeStyle::heightPx.st(),
         unionName = "resolution", unionUnit = "px", settingIcons = listOf(SIZE_WIDTH_ICON, SIZE_HEIGHT_ICON)
     ),
-    ZeroInitWidgetSpec(TapeStyle::widthPx.st()) { style ->
-        basicEmbeddedTape(style, null, if (style.heightPx.isActive) style.heightPx.value else null)
-            ?.resolutionBeforeRotation?.widthPx
+    OverrideWidgetSpec(TapeStyle::widthPx.st()) { _, style ->
+        basicEmbeddedTape(style, null, style.heightPx.value)?.resolutionBeforeRotation?.widthPx ?: 0
     },
-    ZeroInitWidgetSpec(TapeStyle::heightPx.st()) { style ->
-        basicEmbeddedTape(style, if (style.widthPx.isActive) style.widthPx.value else null, null)
-            ?.resolutionBeforeRotation?.heightPx
+    OverrideWidgetSpec(TapeStyle::heightPx.st()) { _, style ->
+        basicEmbeddedTape(style, style.widthPx.value, null)?.resolutionBeforeRotation?.heightPx ?: 0
     },
     WidthWidgetSpec(TapeStyle::cropLeftPx.st(), WidthSpec.TINY),
     WidthWidgetSpec(TapeStyle::cropRightPx.st(), WidthSpec.TINY),
@@ -570,10 +576,15 @@ class UnionWidgetSpec<S : Style>(
 }
 
 
-class ZeroInitWidgetSpec<S : Style, SUBJ : Number>(
-    setting: OptStyleSetting<S, SUBJ>,
-    val getInitialValue: (S) -> SUBJ?
-) : StyleWidgetSpec<S, OptStyleSetting<S, SUBJ>>(setting)
+class OverrideWidgetSpec<S : Style, SUBJ : Any>(
+    setting: OverrideStyleSetting<S, SUBJ>,
+    val getDefaultValue: (Context, S) -> SUBJ
+) : StyleWidgetSpec<S, OverrideStyleSetting<S, SUBJ>>(setting) {
+    data class Context(
+        val mostRecentRuntimeFrames: Int,
+        val mostRecentScrollStyleRuntimeFrames: Map<String, Int>
+    )
+}
 
 
 class SimpleListWidgetSpec<S : Style, SUBJ : Any>(

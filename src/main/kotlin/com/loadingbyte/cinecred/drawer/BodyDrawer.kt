@@ -965,11 +965,9 @@ private fun PictureStyle.createEmbedded(): DeferredImage.EmbeddedPicture? {
     } catch (_: IllegalStateException) {
         return null
     }
-    val width = if (widthPx.isActive) widthPx.value else null
-    val height = if (heightPx.isActive) heightPx.value else null
     return try {
         DeferredImage.EmbeddedPicture(
-            picture, width, height, cropLeftPx, cropRightPx, cropTopPx, cropBottomPx, cropBlankSpace,
+            picture, widthPx.value, heightPx.value, cropLeftPx, cropRightPx, cropTopPx, cropBottomPx, cropBlankSpace,
             hFlip, vFlip, rotationDeg
         )
     } catch (_: IllegalArgumentException) {
@@ -1007,8 +1005,7 @@ private fun TapeStyle.createEmbedded(styling: Styling): DeferredImage.EmbeddedTa
     return try {
         DeferredImage.EmbeddedTape(
             tap,
-            if (widthPx.isActive) widthPx.value else null,
-            if (heightPx.isActive) heightPx.value else null,
+            widthPx.value, heightPx.value,
             cropLeftPx, cropRightPx, cropTopPx, cropBottomPx,
             hFlip, vFlip, rotationDeg,
             leftTemporalMarginFrames, rightTemporalMarginFrames,
@@ -1027,15 +1024,15 @@ private fun TapeStyle.createEmbedded(styling: Styling): DeferredImage.EmbeddedTa
     }
 }
 
-private fun coerceTimecode(optTc: Opt<Timecode>, tape: Tape, styling: Styling): Timecode? = when {
-    !optTc.isActive -> null
+private fun coerceTimecode(tc: Timecode?, tape: Tape, styling: Styling): Timecode? = when {
+    tc == null -> null
     tape.fileSeq ->
         try {
-            optTc.value.toFrames(styling.global.fps)
+            tc.toFrames(styling.global.fps)
         } catch (_: IllegalArgumentException) {
             null
         }
-    else -> when (val tc = optTc.value) {
+    else -> when (tc) {
         // If the user used the timecode format we need, immediately return.
         is Timecode.Clock -> tc
         // If the user used a frames or a SMPTE timecode, convert it to the clock format using the fixed FPS.

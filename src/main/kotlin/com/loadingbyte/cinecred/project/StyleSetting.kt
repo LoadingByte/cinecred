@@ -17,6 +17,8 @@ fun <S : Style> getStyleSettings(styleClass: Class<S>): List<StyleSetting<S, *>>
                 when {
                     Opt::class.java == field.type ->
                         ReflectedOptStyleSetting(styleClass, field.name)
+                    Override::class.java == field.type ->
+                        ReflectedOverrideStyleSetting(styleClass, field.name)
                     PersistentList::class.java.isAssignableFrom(field.type) ->
                         ReflectedListStyleSetting(styleClass, field.name)
                     else ->
@@ -35,6 +37,9 @@ fun <S : Style, SUBJ : Any> KProperty1<S, SUBJ>.st(): DirectStyleSetting<S, SUBJ
 
 fun <S : Style, SUBJ : Any> KProperty1<S, Opt<SUBJ>>.st(): OptStyleSetting<S, SUBJ> =
     KProperty1OptStyleSetting(this)
+
+fun <S : Style, SUBJ : Any> KProperty1<S, Override<SUBJ>>.st(): OverrideStyleSetting<S, SUBJ> =
+    KProperty1OverrideStyleSetting(this)
 
 fun <S : Style, SUBJ : Any> KProperty1<S, PersistentList<SUBJ>>.st(): ListStyleSetting<S, SUBJ> =
     KProperty1ListStyleSetting(this)
@@ -126,6 +131,16 @@ abstract class OptStyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, name
 }
 
 
+abstract class OverrideStyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, name: String) :
+    StyleSetting<S, SUBJ>(styleClass, name, isNested = true) {
+    abstract override fun get(style: S): Override<SUBJ>
+    fun notarize(settingValue: Override<SUBJ>): NotarizedStyleSettingValue<S> = NotarSetImpl(this, settingValue)
+    override fun extractSubjects(style: S): List<SUBJ> = get(style).run { value?.let(::listOf) ?: emptyList() }
+    override fun repackSubjects(subjects: List<SUBJ>): NotarizedStyleSettingValue<S> =
+        notarize(Override(subjects.single()))
+}
+
+
 abstract class ListStyleSetting<S : Style, SUBJ : Any>(styleClass: Class<S>, name: String) :
     StyleSetting<S, SUBJ>(styleClass, name, isNested = true) {
     abstract override fun get(style: S): PersistentList<SUBJ>
@@ -150,6 +165,13 @@ private class ReflectedOptStyleSetting<S : Style>(styleClass: Class<S>, name: St
 }
 
 
+private class ReflectedOverrideStyleSetting<S : Style>(styleClass: Class<S>, name: String) :
+    OverrideStyleSetting<S, Any>(styleClass, name) {
+    private val getter = styleClass.getGetter(name)
+    override fun get(style: S): Override<Any> = getter.invoke(style) as Override<Any>
+}
+
+
 private class ReflectedListStyleSetting<S : Style>(styleClass: Class<S>, name: String) :
     ListStyleSetting<S, Any>(styleClass, name) {
     private val getter = styleClass.getGetter(name)
@@ -167,6 +189,12 @@ private class KProperty1DirectStyleSetting<S : Style, SUBJ : Any>(private val kP
 private class KProperty1OptStyleSetting<S : Style, SUBJ : Any>(private val kProp: KProperty1<S, Opt<SUBJ>>) :
     OptStyleSetting<S, SUBJ>(kProp.getOwnerClass(), kProp.name) {
     override fun get(style: S): Opt<SUBJ> = kProp.get(style)
+}
+
+
+private class KProperty1OverrideStyleSetting<S : Style, SUBJ : Any>(private val kProp: KProperty1<S, Override<SUBJ>>) :
+    OverrideStyleSetting<S, SUBJ>(kProp.getOwnerClass(), kProp.name) {
+    override fun get(style: S): Override<SUBJ> = kProp.get(style)
 }
 
 

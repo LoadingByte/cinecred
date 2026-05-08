@@ -797,25 +797,23 @@ fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
                 is FontVariationsConstr -> {
                     val availableAxes = cst.getAvailableAxes(styling, style)
                     style.forEachRelevantSubject(cst, ignoreSettings) { st, _, variations ->
-                        for ((tag, opt) in variations)
-                            if (opt.isActive) {
-                                val idx = availableAxes.indexOfFirst { axis -> axis.tag == tag }
-                                if (idx != -1) {
-                                    val axis = availableAxes[idx]
-                                    val min = axis.minValue
-                                    val max = axis.maxValue
-                                    val value = opt.value
-                                    var msg: String? = null
-                                    if (!value.isFinite())
-                                        msg = l10n("project.styling.constr.numberFinite")
-                                    else if (value < min)
-                                        msg = l10n("project.styling.constr.numberGTE", min)
-                                    else if (value > max)
-                                        msg = l10n("project.styling.constr.numberLTE", max)
-                                    if (msg != null)
-                                        log(rootStyle, style, st, idx, cst.severity, msg)
-                                }
+                        for ((tag, value) in variations) {
+                            val idx = availableAxes.indexOfFirst { axis -> axis.tag == tag }
+                            if (idx != -1) {
+                                val axis = availableAxes[idx]
+                                val min = axis.minValue
+                                val max = axis.maxValue
+                                var msg: String? = null
+                                if (!value.isFinite())
+                                    msg = l10n("project.styling.constr.numberFinite")
+                                else if (value < min)
+                                    msg = l10n("project.styling.constr.numberGTE", min)
+                                else if (value > max)
+                                    msg = l10n("project.styling.constr.numberLTE", max)
+                                if (msg != null)
+                                    log(rootStyle, style, st, idx, cst.severity, msg)
                             }
+                        }
                     }
                 }
                 is FontFeatureConstr -> {
@@ -849,8 +847,7 @@ fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
                     val formats = cst.getTimecodeFormats(styling, style)
                     val range = cst.getRange(styling, style)
                     style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, sl ->
-                        for (tcOpt in arrayOf(sl.inPoint, sl.outPoint)) if (tcOpt.isActive) {
-                            val tc = tcOpt.value
+                        for (tc in arrayOf(sl.inPoint, sl.outPoint)) if (tc != null) {
                             if (tc.format !in formats) {
                                 val msg = l10n("project.styling.constr.timecodeFormatDisallowed")
                                 log(rootStyle, style, st, idx, cst.severity, msg)
@@ -868,8 +865,8 @@ fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
                                 log(rootStyle, style, st, idx, cst.severity, msg)
                             }
                         }
-                        if (sl.inPoint.isActive && sl.outPoint.isActive &&
-                            lessThan(sl.inPoint.value, sl.outPoint.value, fps) == false
+                        if (sl.inPoint != null && sl.outPoint != null &&
+                            lessThan(sl.inPoint, sl.outPoint, fps) == false
                         )
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.tapeSpanLT"))
                     }

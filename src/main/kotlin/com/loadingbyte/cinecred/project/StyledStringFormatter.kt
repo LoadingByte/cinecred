@@ -137,9 +137,7 @@ private fun generateFmtStrFonts(style: LetterStyle): TextContext.Fonts? {
     // If the font is not linked properly, fall back to a generic font.
     val font = style.font.font ?: PLACEHOLDER_LETTER_STYLE.font.font!!
 
-    val variations = style.variations.mapNotNullTo(HashSet()) { (tag, opt) ->
-        if (opt.isActive) Font.Variation(tag, opt.value) else null
-    }
+    val variations = style.variations.mapTo(HashSet()) { (tag, value) -> Font.Variation(tag, value) }
     val baseFontCase = font.case(variations = variations)
 
     // Leading

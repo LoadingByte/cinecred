@@ -17,8 +17,8 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Transparency
 import com.loadingbyte.cinecred.delivery.RenderQueue
 import com.loadingbyte.cinecred.drawer.DrawnPage
 import com.loadingbyte.cinecred.drawer.DrawnProject
-import com.loadingbyte.cinecred.imaging.Bitmap.Scan
 import com.loadingbyte.cinecred.project.PageBehavior
+import com.loadingbyte.cinecred.project.Scan
 import com.loadingbyte.cinecred.ui.DeliveryDestTemplate
 import com.loadingbyte.cinecred.ui.ProjectController
 import com.loadingbyte.cinecred.ui.comms.*

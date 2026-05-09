@@ -6,12 +6,12 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Config
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.choice
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.FPS_SCALING
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.SCAN
-import com.loadingbyte.cinecred.imaging.Bitmap
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
 import com.loadingbyte.cinecred.imaging.DeferredVideo
 import com.loadingbyte.cinecred.imaging.DeferredVideo.TapeSpan
 import com.loadingbyte.cinecred.imaging.Tape
+import com.loadingbyte.cinecred.project.Scan
 import com.loadingbyte.cinecred.project.Styling
 import org.w3c.dom.Document
 import org.w3c.dom.Element
@@ -44,7 +44,7 @@ class TapeTimelineRenderJob private constructor(
     //   - The VideoRenderJob does the same thing.
     //   - FPS scaling can slightly shift around parts of the sequence.
     //   - We want to provide field-accurate rec in and out points.
-    private val extraFPSMul = if (config[SCAN] == Bitmap.Scan.PROGRESSIVE) 1 else 2
+    private val extraFPSMul = if (config[SCAN] == Scan.PROGRESSIVE) 1 else 2
 
     override fun render(progressCallback: (Int) -> Unit) {
         val tapeSpans = video.copy(fpsScaling = config[FPS_SCALING] * extraFPSMul)
@@ -76,8 +76,9 @@ class TapeTimelineRenderJob private constructor(
             val tapeStartRounded = tapeStartExact.toSMPTENonDropFrame(tapeFPS)
             var recIn = formatTimecode(global.fps, global.timecodeFormat, startFrame)
             var recOut = formatTimecode(global.fps, global.timecodeFormat, stopFrame)
-            if (scan != Bitmap.Scan.PROGRESSIVE) {
-                val tff = scan == Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST
+            if (scan != Scan.PROGRESSIVE) {
+                val tff = scan == Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST ||
+                        scan == Scan.INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST
                 recIn += if ((startField % 2 == 0) == tff) " \u25D3" else " \u25D2"
                 recOut += if ((stopField % 2 == 0) == tff) " \u25D3" else " \u25D2"
             }

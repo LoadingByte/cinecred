@@ -27,9 +27,10 @@ import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.TRANSPA
 import com.loadingbyte.cinecred.delivery.RenderFormat.Property.Companion.YUV
 import com.loadingbyte.cinecred.delivery.VideoContainerRenderJob
 import com.loadingbyte.cinecred.imaging.Bitmap
-import com.loadingbyte.cinecred.imaging.Bitmap.Scan
 import com.loadingbyte.cinecred.imaging.BitmapWriter.*
 import com.loadingbyte.cinecred.imaging.ColorSpace
+import com.loadingbyte.cinecred.project.Scan
+import com.loadingbyte.cinecred.project.label
 import com.loadingbyte.cinecred.projectio.SPREADSHEET_FORMATS
 import com.loadingbyte.cinecred.ui.DeliveryDestTemplate
 import com.loadingbyte.cinecred.ui.DeliveryDestTemplate.Placeholder
@@ -244,7 +245,7 @@ class DeliverConfigurationForm(private val deliveryCtrl: DeliveryCtrlComms) :
     private val scanWidget =
         ComboBoxWidget(
             Scan::class.java, emptyList(), widthSpec = WidthSpec.SQUEEZE,
-            toString = { scan -> l10n("ui.deliverConfig.scan.$scan") }
+            toString = Scan::label
         )
 
     private val depthWidget =

@@ -42,6 +42,7 @@ import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.SRGB
 import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.ST428
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
+import com.loadingbyte.cinecred.project.Scan
 import com.loadingbyte.cinecred.project.Styling
 import org.bytedeco.ffmpeg.global.avcodec.*
 import org.bytedeco.ffmpeg.global.avutil.*
@@ -103,8 +104,24 @@ class VideoContainerRenderJob private constructor(
                 if (settings.pixelFormat.hasChromaSub) AVCHROMA_LOC_LEFT else AVCHROMA_LOC_UNSPECIFIED,
                 if (config[TRANSPARENCY] == TRANSPARENT) Bitmap.Alpha.STRAIGHT else Bitmap.Alpha.OPAQUE
             ),
-            scan,
-            if (scan == Bitmap.Scan.PROGRESSIVE) Bitmap.Content.PROGRESSIVE_FRAME else Bitmap.Content.INTERLEAVED_FIELDS
+            scan = when (scan) {
+                Scan.PROGRESSIVE -> Bitmap.Scan.PROGRESSIVE
+                Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST,
+                Scan.INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
+                    Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST
+                Scan.INTERLACED_BOT_SHOWN_FIRST_AND_TOP_CODED_FIRST,
+                Scan.INTERLACED_BOT_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
+                    Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST
+            },
+            content = when (scan) {
+                Scan.PROGRESSIVE -> Bitmap.Content.PROGRESSIVE_FRAME
+                Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST,
+                Scan.INTERLACED_BOT_SHOWN_FIRST_AND_TOP_CODED_FIRST ->
+                    Bitmap.Content.INTERLEAVED_FIELDS
+                Scan.INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST,
+                Scan.INTERLACED_BOT_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
+                    Bitmap.Content.INTERLEAVED_FIELDS_REVERSED
+            }
         )
 
         var backendSpec = writerSpec
@@ -275,7 +292,7 @@ class VideoContainerRenderJob private constructor(
         private val codecPresetOptions: List<String>
     ) : Format(
         label, codecId, "mp4",
-        opaqueTransparenciesTimesColorProps() * choice(DEPTH, 8, 10) * fixed(SCAN, Bitmap.Scan.PROGRESSIVE) *
+        opaqueTransparenciesTimesColorProps() * choice(DEPTH, 8, 10) * fixed(SCAN, Scan.PROGRESSIVE) *
                 choice(GENERIC_PROFILE),
         widthMod = 2,
         heightMod = 2
@@ -332,7 +349,7 @@ class VideoContainerRenderJob private constructor(
 
     private class DNxHRFormat : Format(
         "DNxHR", AV_CODEC_ID_DNXHD, "mxf",
-        opaqueTransparenciesTimesColorProps() * fixed(SCAN, Bitmap.Scan.PROGRESSIVE) *
+        opaqueTransparenciesTimesColorProps() * fixed(SCAN, Scan.PROGRESSIVE) *
                 (choice(DNXHR_PROFILE, DNXHR_LB, DNXHR_SQ, DNXHR_HQ) * fixed(DEPTH, 8) +
                         choice(DNXHR_PROFILE, DNXHR_HQX, DNXHR_444) * fixed(DEPTH, 10)),
         minWidth = 256,
@@ -362,7 +379,7 @@ class VideoContainerRenderJob private constructor(
         "CineForm", AV_CODEC_ID_CFHD, "mov",
         opaqueTransparenciesTimesColorProps() * fixed(DEPTH, 10) * choice(SCAN) *
                 choice(CINEFORM_PROFILE, CF_422_LOW, CF_422_MED, CF_422_HI, CF_422_FILM1, CF_422_FILM2, CF_422_FILM3) +
-                allTransparenciesTimesColorSpace() * fixed(DEPTH, 12) * fixed(SCAN, Bitmap.Scan.PROGRESSIVE) *
+                allTransparenciesTimesColorSpace() * fixed(DEPTH, 12) * fixed(SCAN, Scan.PROGRESSIVE) *
                 choice(CINEFORM_PROFILE, CF_444_LOW, CF_444_MED, CF_444_HI, CF_444_FILM1, CF_444_FILM2, CF_444_FILM3),
         widthMod = 16,
         heightMod = 8,
@@ -392,7 +409,7 @@ class VideoContainerRenderJob private constructor(
 
     private class TheoraFormat : Format(
         "Theora", AV_CODEC_ID_THEORA, "ogv",
-        opaqueTransparenciesTimesColorProps() * fixed(DEPTH, 8) * fixed(SCAN, Bitmap.Scan.PROGRESSIVE) *
+        opaqueTransparenciesTimesColorProps() * fixed(DEPTH, 8) * fixed(SCAN, Scan.PROGRESSIVE) *
                 choice(GENERIC_PROFILE)
     ) {
         override fun videoWriterSettings(config: Config): List<VideoWriterSettings> {

@@ -27,6 +27,7 @@ import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.BLENDING
 import com.loadingbyte.cinecred.imaging.ColorSpace.Transfer.Companion.LINEAR
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.STATIC
 import com.loadingbyte.cinecred.imaging.DeferredImage.Companion.TAPES
+import com.loadingbyte.cinecred.project.Scan
 import com.loadingbyte.cinecred.project.Styling
 import org.bytedeco.ffmpeg.global.avutil.*
 import java.nio.file.Path
@@ -98,8 +99,25 @@ class ImageSequenceRenderJob private constructor(
             )
         }
         val backendSpec = Bitmap.Spec(
-            scaledVideo.resolution, backendRep, scan,
-            if (scan == Bitmap.Scan.PROGRESSIVE) Bitmap.Content.PROGRESSIVE_FRAME else Bitmap.Content.INTERLEAVED_FIELDS
+            scaledVideo.resolution, backendRep,
+            scan = when (scan) {
+                Scan.PROGRESSIVE -> Bitmap.Scan.PROGRESSIVE
+                Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST,
+                Scan.INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
+                    Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST
+                Scan.INTERLACED_BOT_SHOWN_FIRST_AND_TOP_CODED_FIRST,
+                Scan.INTERLACED_BOT_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
+                    Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST
+            },
+            content = when (scan) {
+                Scan.PROGRESSIVE -> Bitmap.Content.PROGRESSIVE_FRAME
+                Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST,
+                Scan.INTERLACED_BOT_SHOWN_FIRST_AND_TOP_CODED_FIRST ->
+                    Bitmap.Content.INTERLEAVED_FIELDS
+                Scan.INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST,
+                Scan.INTERLACED_BOT_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
+                    Bitmap.Content.INTERLEAVED_FIELDS_REVERSED
+            }
         )
 
         DeferredVideo.BitmapBackend(

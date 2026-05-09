@@ -36,6 +36,7 @@ Cinecred Changelog
 - If vertical gaps are fully crushed due to a runtime fine adjustment in the
   styling or spreadsheet, a warning is now emitted.
 - PDF exports now subset their embedded fonts, drastically reducing file size.
+- Interlaced exports can now freely mix the first shown and first coded field.
 
 ### Fixes
 

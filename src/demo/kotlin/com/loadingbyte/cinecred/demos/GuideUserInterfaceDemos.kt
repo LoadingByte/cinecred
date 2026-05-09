@@ -15,6 +15,7 @@ import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.DeckLink
 import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.LetterStyle
+import com.loadingbyte.cinecred.project.Scan
 import com.loadingbyte.cinecred.project.st
 import com.loadingbyte.cinecred.ui.DELIVERY_DEST_TEMPLATES_PREFERENCE
 import com.loadingbyte.cinecred.ui.DeliveryDestTemplate
@@ -402,7 +403,7 @@ object GuideUserInterfaceDeliveryDemo : ScreencastDemo("$DIR/delivery", Format.V
         sc.click()
         sc.mouseTo(prjWin.desktopPosOf(dlvScan))
         sc.click(2 * hold)
-        sc.mouseTo(prjWin.desktopPosOfDropdownItem(Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST))
         sc.click()
         sc.mouseTo(prjWin.desktopPosOf(dlvPrimaries))
         sc.click()

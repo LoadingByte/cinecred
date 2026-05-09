@@ -25,6 +25,7 @@ fun <S : Style> getStyleWidgetSpecs(styleClass: Class<S>): List<StyleWidgetSpec<
 
 
 private val GLOBAL_WIDGET_SPECS: List<StyleWidgetSpec<Global, *>> = listOf(
+    LabelWidgetSpec(Global::resolution.st(), labelL10nKey = "resolution"),
     UnitWidgetSpec(Global::resolution.st(), Global::unitVGapPx.st(), unit = "px"),
     UnitWidgetSpec(Global::fps.st(), unit = "fps"),
     TimecodeWidgetSpec(
@@ -56,6 +57,10 @@ private val PAGE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PageStyle, *>> = listO
     UnionWidgetSpec(
         PageStyle::cardFadeOutFrames.st(), PageStyle::cardFadeOutTransitionStyleName.st(),
         unionName = "cardFadeOut", settingIcons = listOf(null, TRANSITION_ICON)
+    ),
+    LabelWidgetSpec(
+        PageStyle::scrollRuntimeFrames.st(),
+        labelL10nKey = "ui.styling.global.runtimeFrames", descL10nKey = "ui.styling.global.runtimeFrames.desc"
     ),
     OverrideWidgetSpec(
         PageStyle::scrollRuntimeFrames.st(),
@@ -143,9 +148,10 @@ private val CONTENT_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<ContentStyle, *>> =
     ToggleButtonGroupWidgetSpec(ContentStyle::flowTextVJustify.st(), ICON),
     UnionWidgetSpec(
         ContentStyle::flowTextVJustifyFragments.st(), ContentStyle::flowTextVJustify.st(),
-        unionName = "flowTextVJustify"
+        unionLabelL10nKey = "ui.styling.content.gridTextVJustify"
     ),
     NumberWidgetSpec(ContentStyle::flowRowWidthPx.st(), step = 10.0),
+    LabelWidgetSpec(ContentStyle::flowRowGapPx.st(), labelL10nKey = "ui.styling.content.gridRowGapPx"),
     WidthWidgetSpec(ContentStyle::flowSeparator.st(), WidthSpec.NARROW),
     ToggleButtonGroupWidgetSpec(ContentStyle::flowSeparatorVJustify.st(), ICON),
     ToggleButtonGroupWidgetSpec(ContentStyle::paragraphsLineHJustify.st(), ICON),
@@ -221,7 +227,7 @@ private val LETTER_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<LetterStyle, *>> = l
     WidthWidgetSpec(LetterStyle::heightPx.st(), WidthSpec.LITTLE),
     UnionWidgetSpec(
         LetterStyle::heightPx.st(),
-        unionUnit = "px",
+        unionLabelL10nKey = "height", unionUnit = "px",
         settingIcons = listOf(FONT_HEIGHT_TOTAL_ICON)
     ),
     WidthWidgetSpec(LetterStyle::leadingTopRh.st(), WidthSpec.LITTLE),
@@ -391,7 +397,7 @@ private val PICTURE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<PictureStyle, *>> =
     WidthWidgetSpec(PictureStyle::heightPx.st(), WidthSpec.NARROW),
     UnionWidgetSpec(
         PictureStyle::widthPx.st(), PictureStyle::heightPx.st(),
-        unionName = "resolution", unionUnit = "px", settingIcons = listOf(SIZE_WIDTH_ICON, SIZE_HEIGHT_ICON)
+        unionLabelL10nKey = "resolution", unionUnit = "px", settingIcons = listOf(SIZE_WIDTH_ICON, SIZE_HEIGHT_ICON)
     ),
     OverrideWidgetSpec(PictureStyle::widthPx.st()) { _, style ->
         basicEmbeddedPic(style, null, style.heightPx.value)?.widthBeforeRotation ?: 0.0
@@ -435,7 +441,7 @@ private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listO
     WidthWidgetSpec(TapeStyle::heightPx.st(), WidthSpec.LITTLE),
     UnionWidgetSpec(
         TapeStyle::widthPx.st(), TapeStyle::heightPx.st(),
-        unionName = "resolution", unionUnit = "px", settingIcons = listOf(SIZE_WIDTH_ICON, SIZE_HEIGHT_ICON)
+        unionLabelL10nKey = "resolution", unionUnit = "px", settingIcons = listOf(SIZE_WIDTH_ICON, SIZE_HEIGHT_ICON)
     ),
     OverrideWidgetSpec(TapeStyle::widthPx.st()) { _, style ->
         basicEmbeddedTape(style, null, style.heightPx.value)?.resolutionBeforeRotation?.widthPx ?: 0
@@ -455,8 +461,9 @@ private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listO
     ),
     UnionWidgetSpec(
         TapeStyle::hFlip.st(), TapeStyle::vFlip.st(),
-        unionName = "flip", settingIcons = listOf(FLIP_ICON, FLIP_ICON.getRotatedIcon(90.0))
+        unionLabelL10nKey = "ui.styling.picture.flip", settingIcons = listOf(FLIP_ICON, FLIP_ICON.getRotatedIcon(90.0))
     ),
+    LabelWidgetSpec(TapeStyle::rotationDeg.st(), labelL10nKey = "ui.styling.picture.rotationDeg"),
     UnitWidgetSpec(TapeStyle::rotationDeg.st(), unit = "°"),
     NumberWidgetSpec(TapeStyle::rotationDeg.st(), step = 90),
     ToggleButtonGroupWidgetSpec(TapeStyle::temporallyJustify.st(), ICON),
@@ -472,11 +479,11 @@ private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listO
     ),
     UnionWidgetSpec(
         TapeStyle::fadeInFrames.st(), TapeStyle::fadeInTransitionStyleName.st(),
-        unionName = "fadeIn", settingIcons = listOf(null, TRANSITION_ICON)
+        unionLabelL10nKey = "ui.styling.page.cardFadeIn", settingIcons = listOf(null, TRANSITION_ICON)
     ),
     UnionWidgetSpec(
         TapeStyle::fadeOutFrames.st(), TapeStyle::fadeOutTransitionStyleName.st(),
-        unionName = "fadeOut", settingIcons = listOf(null, TRANSITION_ICON)
+        unionLabelL10nKey = "ui.styling.page.cardFadeOut", settingIcons = listOf(null, TRANSITION_ICON)
     )
 )
 
@@ -503,6 +510,14 @@ sealed class StyleWidgetSpec<S : Style, SS : StyleSetting<S, *>>(
 
 class NewSectionWidgetSpec<S : Style>(
     setting: StyleSetting<S, Any>
+) : StyleWidgetSpec<S, StyleSetting<S, Any>>(setting)
+
+
+class LabelWidgetSpec<S : Style>(
+    setting: StyleSetting<S, Any>,
+    val label: String? = null,
+    val labelL10nKey: String? = null,
+    val descL10nKey: String? = null
 ) : StyleWidgetSpec<S, StyleSetting<S, Any>>(setting)
 
 
@@ -556,6 +571,9 @@ class TimecodeWidgetSpec<S : Style>(
 class UnionWidgetSpec<S : Style>(
     vararg settings: StyleSetting<S, Any>,
     val unionName: String? = null,
+    val unionLabel: String? = null,
+    val unionLabelL10nKey: String? = null,
+    val unionDescL10nKey: String? = null,
     val unionUnit: String? = null,
     val settingLabels: List<Int> = emptyList(),
     val settingUnits: List<String?>? = null,

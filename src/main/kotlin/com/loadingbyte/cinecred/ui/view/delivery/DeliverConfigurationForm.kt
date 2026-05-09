@@ -230,7 +230,7 @@ class DeliverConfigurationForm(private val deliveryCtrl: DeliveryCtrlComms) :
             l10n("ui.styling.layer.scaling"),
             UnionWidget(
                 listOf(spatialScalingWidget, resolutionWidget),
-                labels = listOf(null, l10n("ui.styling.global.resolution"))
+                labels = listOf(null, l10n("resolution"))
             )
         )
     }

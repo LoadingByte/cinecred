@@ -240,7 +240,7 @@ class ProjectsPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         )
 
         val resolutionWidget = addWidget(
-            l10n("ui.styling.global.resolution"),
+            l10n("resolution"),
             ResolutionWidget()
         )
 

@@ -55,19 +55,23 @@ class StyleForm<S : Style>(
             is RowManagingWidget<*> -> externallyManagedLabelsLookup[setting] = addRowManagingWidget(valueWidget)
             is LayerListWidget<*, *> -> addWholeWidthWidget(valueWidget)
             else -> {
-                val formRow = makeFormRow(setting.name, getUnit(setting), valueWidget)
+                var label: String? = null
+                var unit: String? = null
+                var desc: String? = null
+                for (widgetSpec in getStyleWidgetSpecs(styleClass))
+                    if (widgetSpec is LabelWidgetSpec && setting in widgetSpec.settings) {
+                        label = label ?: widgetSpec.label ?: widgetSpec.labelL10nKey?.let(::l10n)
+                        desc = desc ?: widgetSpec.descL10nKey?.let(::l10n)
+                    } else if (widgetSpec is UnitWidgetSpec && setting in widgetSpec.settings)
+                        unit = unit ?: widgetSpec.unit
+                label = label ?: l10n(l10nKey(setting.name))
+                desc = desc ?: desc(setting.name)
+                val formRow = makeFormRow(label, unit, desc, valueWidget)
                 rootFormRows.add(Pair(formRow, listOf(setting)))
                 rootFormRowLookup[setting] = formRow
                 addFormRow(formRow)
             }
         }
-    }
-
-    private fun getUnit(setting: StyleSetting<S, *>): String? {
-        for (widgetSpec in getStyleWidgetSpecs(styleClass))
-            if (widgetSpec is UnitWidgetSpec && setting in widgetSpec.settings)
-                return widgetSpec.unit
-        return null
     }
 
     private fun addSettingUnionWidget(spec: UnionWidgetSpec<S>) {
@@ -88,7 +92,9 @@ class StyleForm<S : Style>(
             wrappedWidgets, wrappedLabels, spec.settingIcons, spec.settingGaps, spec.settingNewlines
         )
         val unionName = spec.unionName ?: spec.settings.first().name
-        val formRow = makeFormRow(unionName, spec.unionUnit, unionWidget)
+        val unionLabel = spec.unionLabel ?: spec.unionLabelL10nKey?.let(::l10n) ?: l10n(l10nKey(unionName))
+        val unionDesc = spec.unionDescL10nKey?.let(::l10n) ?: desc(unionName)
+        val formRow = makeFormRow(unionLabel, spec.unionUnit, unionDesc, unionWidget)
         rootFormRows.add(Pair(formRow, spec.settings))
         for (setting in spec.settings)
             rootFormRowLookup[setting] = formRow
@@ -352,23 +358,25 @@ class StyleForm<S : Style>(
         inconsistent
     )
 
-    private fun makeFormRow(name: String, unit: String?, widget: Widget<*>): FormRow {
-        val l10nKey = l10nKey(name)
-        var label = l10n(l10nKey)
-        if (unit != null)
-            label += " [$unit]"
+    private fun makeFormRow(label: String, unit: String?, desc: String?, widget: Widget<*>): FormRow {
+        val label = if (unit == null) label else "$label [$unit]"
         val formRow = FormRow(label, widget)
-        try {
-            formRow.notice = Notice(Severity.INFO, l10n("$l10nKey.desc"))
-        } catch (_: MissingResourceException) {
-            // No desc specified for this row.
-        }
+        if (desc != null)
+            formRow.notice = Notice(Severity.INFO, desc)
         return formRow
     }
 
     private fun l10nKey(name: String) = "ui.styling." +
             styleClass.simpleName.removeSuffix("Style").replaceFirstChar(Char::lowercaseChar) +
             ".$name"
+
+    private fun desc(name: String) =
+        try {
+            l10n("${l10nKey(name)}.desc")
+        } catch (_: MissingResourceException) {
+            // No desc specified for this row.
+            null
+        }
 
     fun <T : Style> castToStyle(styleClass: Class<T>): StyleForm<T> {
         if (styleClass.isAssignableFrom(this.styleClass))

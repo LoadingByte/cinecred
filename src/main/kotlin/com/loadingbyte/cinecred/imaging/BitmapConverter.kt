@@ -1899,7 +1899,7 @@ class BitmapConverter(
                 }
                 zimg_image_format.color_family(fmt, colorFam)
                 zimg_image_format.matrix_coefficients(fmt, matrix)
-                zimg_image_format.transfer_characteristics(fmt, zimgTransfer(desc.transfer))
+                zimg_image_format.transfer_characteristics(fmt, zimgTransfer(desc.primaries, desc.transfer, depth))
                 zimg_image_format.color_primaries(fmt, prim)
                 zimg_image_format.depth(fmt, depth)
                 zimg_image_format.pixel_range(fmt, range)
@@ -1998,8 +1998,8 @@ class BitmapConverter(
                         else -> throw IllegalArgumentException("Primaries not supported by zimg: $primaries")
                     }
 
-                private fun zimgTransfer(transfer: ColorSpace.Transfer): Int =
-                    if (!transfer.hasCode) ZIMG_TRANSFER_UNSPECIFIED() else when (transfer.canonCode) {
+                private fun zimgTransfer(pri: ColorSpace.Primaries?, transfer: ColorSpace.Transfer, depth: Int): Int =
+                    if (!transfer.hasCode) ZIMG_TRANSFER_UNSPECIFIED() else when (transfer.code(pri, depth)) {
                         AVCOL_TRC_BT709 -> ZIMG_TRANSFER_BT709()
                         AVCOL_TRC_GAMMA22 -> ZIMG_TRANSFER_BT470_M()
                         AVCOL_TRC_GAMMA28 -> ZIMG_TRANSFER_BT470_BG()

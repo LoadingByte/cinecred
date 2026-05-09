@@ -302,10 +302,10 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
         val hasCurve: Boolean get() = _toLinear != null
 
         /** One of the `AVCOL_TRC_*` constants. */
-        fun code(primaries: Primaries, depth: Int): Int {
+        fun code(primaries: Primaries?, depth: Int): Int {
             if (!hasCode)
                 throw IllegalStateException("Transfer function $name does not have a code.")
-            if (_code == AVCOL_TRC_BT709 && primaries.hasCode)
+            if (_code == AVCOL_TRC_BT709 && primaries != null && primaries.hasCode)
                 when (primaries.code) {
                     AVCOL_PRI_SMPTE170M -> return AVCOL_TRC_SMPTE170M
                     AVCOL_PRI_SMPTE240M -> return AVCOL_TRC_SMPTE240M

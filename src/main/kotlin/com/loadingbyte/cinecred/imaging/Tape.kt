@@ -167,10 +167,9 @@ class Tape private constructor(
         }
 
         fun toPreviewPicture(frame: VideoReader.Frame): Picture.Raster {
-            Bitmap.allocate(pictureSpec).use { picturePreviewBitmap ->
-                tape2picture!!.convert(frame.bitmap, picturePreviewBitmap)
-                return Picture.Raster(picturePreviewBitmap)
-            }
+            val picturePreviewBitmap = Bitmap.allocate(pictureSpec)
+            tape2picture!!.convert(frame.bitmap, picturePreviewBitmap)
+            return Picture.Raster(picturePreviewBitmap)
         }
 
         override fun close() {

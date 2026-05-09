@@ -63,7 +63,7 @@ sealed interface Picture : AutoCloseable {
     fun nonBlankBounds(crop: Rectangle2D? = null, transform: AffineTransform? = null): Rectangle2D?
 
 
-    class Raster private constructor(
+    class Raster(
         /**
          * A planar float32 RBG(A) bitmap with full range, linear transfer characteristics, and premultiplied alpha.
          *
@@ -73,6 +73,13 @@ sealed interface Picture : AutoCloseable {
          */
         val bitmap: Bitmap
     ) : Picture {
+
+        init {
+            val rep = bitmap.spec.representation
+            val cs = requireNotNull(rep.colorSpace) { "Cannot create picture from a bitmap without a color space." }
+            require(bitmap.spec.representation == compatibleRepresentation(cs.primaries, rep.pixelFormat.hasAlpha))
+            require(bitmap.spec.scan == Bitmap.Scan.PROGRESSIVE)
+        }
 
         override val width get() = bitmap.spec.resolution.widthPx.toDouble()
         override val height get() = bitmap.spec.resolution.heightPx.toDouble()
@@ -124,8 +131,8 @@ sealed interface Picture : AutoCloseable {
                 if (hasAlpha) Bitmap.Alpha.PREMULTIPLIED else Bitmap.Alpha.OPAQUE
             )
 
-            /** After this constructor returns, [bitmap] may be closed without affecting the new picture object. */
-            operator fun invoke(bitmap: Bitmap): Raster {
+            /** After this method returns, [bitmap] may be closed without affecting the new picture object. */
+            fun convert(bitmap: Bitmap): Raster {
                 val (res, rep, scan) = bitmap.spec
                 val cs = requireNotNull(rep.colorSpace) { "Cannot create picture from a bitmap without a color space." }
                 val requiredRep = compatibleRepresentation(cs.primaries, rep.pixelFormat.hasAlpha)

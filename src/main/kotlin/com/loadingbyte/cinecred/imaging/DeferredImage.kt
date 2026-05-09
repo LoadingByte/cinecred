@@ -1096,7 +1096,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                         )
                     }
                     // Place the bitmap in the PDF.
-                    val embeddedPic = EmbeddedPicture(Picture.Raster(bitmap))
+                    val embeddedPic = EmbeddedPicture(Picture.Raster.convert(bitmap))
                     materializeEmbeddedPicture(xWhole - pad, yWhole - pad, 1.0, embeddedPic, draft = false)
                 }
                 return
@@ -1428,7 +1428,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
                     val tr = AffineTransform.getScaleInstance(maxRes.widthPx / pic.width, maxRes.heightPx / pic.height)
                     Bitmap.allocate(Bitmap.Spec(maxRes, Canvas.compatibleRepresentation(colorSpace))).use { canvasBmp ->
                         Canvas.forBitmap(canvasBmp.zero()).use { canvas -> pic.drawTo(canvas, tr) }
-                        bitmap = Picture.Raster(canvasBmp).bitmap
+                        bitmap = Picture.Raster.convert(canvasBmp).bitmap
                     }
                 }
                 is Picture.PDF -> throw IllegalStateException()

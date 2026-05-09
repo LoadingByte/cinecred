@@ -625,7 +625,7 @@ class WelcomeCtrl(private val masterCtrl: MasterCtrlComms) : WelcomeCtrlComms {
                                 val rep = Canvas.compatibleRepresentation(ColorSpace.SRGB)
                                 val bitmap = Bitmap.allocate(Bitmap.Spec(res, rep))
                                 Canvas.forBitmap(bitmap.zero()).use(pic::drawTo)
-                                Picture.Raster(bitmap)
+                                Picture.Raster.convert(bitmap)
                             }
                         }
                     ImageOverlay(uuid, name, raster, rasterPersisted = false, imageUnderlay)

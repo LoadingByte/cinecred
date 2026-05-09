@@ -842,6 +842,8 @@ class Bitmap private constructor(
                 populateCodeBased()
             }
 
+            val CODES: List<Int> = CODE_BASED.filterNotNull().map(YUVCoefficients::code)
+
             /** @throws IllegalArgumentException If the [code] does not refer to YUV coefficients. */
             fun of(code: Int): YUVCoefficients =
                 requireNotNull(CODE_BASED.getOrNull(code)) { "Unknown YUV coefficients code: $code" }

@@ -27,6 +27,8 @@ Cinecred Changelog
 - Embedded pictures and videos may now be cropped, flipped, and rotated.
 - Embedded raster pictures may now have their blank space automatically cropped.
 - Embedded videos can now loop.
+- The levels, color space, alpha type, and interlacing of embedded videos may
+  now be overridden in case the metadata is wrong.
 - The preview resolution of embedded videos is now configurable.
 - The credits runtime can now be copied to the clipboard by clicking on it.
 - Overridable quantities like total runtime or picture width now continuously

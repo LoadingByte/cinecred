@@ -12,6 +12,8 @@ import com.loadingbyte.cinecred.ui.comms.DockableId.LOG
 import com.loadingbyte.cinecred.ui.comms.DockableId.STYLING
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
+import org.bytedeco.ffmpeg.global.avutil.AVCOL_PRI_SMPTE428
+import org.bytedeco.ffmpeg.global.avutil.AVCOL_TRC_LOG_SQRT
 import java.awt.Dimension
 import java.lang.Thread.sleep
 import kotlin.io.path.*
@@ -36,7 +38,8 @@ val GUIDE_PICTURE_VIDEO_DEMOS
         GuidePictureVideoVideoLoopDemo,
         GuidePictureVideoVideoTemporallyJustifyDemo,
         GuidePictureVideoVideoTemporalMarginDemo,
-        GuidePictureVideoVideoFadeDemo
+        GuidePictureVideoVideoFadeDemo,
+        GuidePictureVideoVideoInterpretationDemo
     )
 
 
@@ -308,6 +311,22 @@ object GuidePictureVideoVideoFadeDemo : StyleSettingsVideoDemo<TapeStyle>(
         )
         this += last().copy(fadeInFrames = 30)
         this += last().copy(fadeOutFrames = 10)
+    }
+
+    override fun credits(style: TapeStyle) = TAPE_SPREADSHEET.parseCreditsTS(style)
+}
+
+
+object GuidePictureVideoVideoInterpretationDemo : StyleSettingsVideoDemo<TapeStyle>(
+    "$DIR/video-interpretation", Format.VIDEO_GIF,
+    listOf(
+        TapeStyle::range.st(), TapeStyle::primaries.st(), TapeStyle::transfer.st(), TapeStyle::yuvCoefficients.st(),
+        TapeStyle::alpha.st(), TapeStyle::scan.st()
+    )
+) {
+    override fun styles() = buildList<TapeStyle> {
+        this += TAPE_STYLE
+        this += last().copy(primaries = Override(AVCOL_PRI_SMPTE428), transfer = Override(AVCOL_TRC_LOG_SQRT))
     }
 
     override fun credits(style: TapeStyle) = TAPE_SPREADSHEET.parseCreditsTS(style)

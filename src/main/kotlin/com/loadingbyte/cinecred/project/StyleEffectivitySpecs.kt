@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.project
 
+import com.loadingbyte.cinecred.imaging.Bitmap
 import com.loadingbyte.cinecred.imaging.Font.Companion.CAPITAL_SPACING_FEATURE
 import com.loadingbyte.cinecred.imaging.Font.Companion.KERNING_FEATURE
 import com.loadingbyte.cinecred.imaging.Font.Companion.LIGATURES_FEATURES
@@ -407,8 +408,36 @@ private val TAPE_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<TapeStyle>> 
     StyleEffectivitySpec(
         TapeStyle::fadeOutTransitionStyleName.st(),
         isAlmostEffective = { _, style -> style.fadeOutFrames == 0 }
+    ),
+    StyleEffectivitySpec(
+        TapeStyle::range.st(),
+        isAlmostEffective = { _, style ->
+            val spec = tapeSpec(style)
+            spec != null && spec.representation.pixelFormat.isFloat
+        }
+    ),
+    StyleEffectivitySpec(
+        TapeStyle::yuvCoefficients.st(),
+        isAlmostEffective = { _, style ->
+            val spec = tapeSpec(style)
+            spec != null && spec.representation.pixelFormat.family != Bitmap.PixelFormat.Family.YUV
+        }
+    ),
+    StyleEffectivitySpec(
+        TapeStyle::alpha.st(),
+        isAlmostEffective = { _, style ->
+            val spec = tapeSpec(style)
+            spec != null && !spec.representation.pixelFormat.hasAlpha
+        }
     )
 )
+
+private fun tapeSpec(style: TapeStyle) =
+    try {
+        style.tape.tape?.spec
+    } catch (_: IllegalStateException) {
+        null
+    }
 
 
 class StyleEffectivitySpec<S : Style>(

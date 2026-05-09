@@ -741,7 +741,7 @@ class DeferredVideo private constructor(
                         } catch (_: Exception) {
                             source = Source.UNAVAILABLE
                             val rep = Picture.Raster.compatibleRepresentation(
-                                userSpec.representation.colorSpace!!.primaries, hasAlpha = false
+                                userSpec.representation.colorSpace!!, Bitmap.Alpha.OPAQUE
                             )
                             origSpec = Bitmap.Spec(embeddedTape.resolution, rep)
                             readCrop = embeddedTape.resolution.run { Rectangle(widthPx, heightPx) }
@@ -1094,7 +1094,11 @@ class DeferredVideo private constructor(
                 Overlayer.computeUserCeiling(canvasRep.colorSpace!!, userRep.colorSpace!!, canvasCeiling)
 
             init {
-                val prepRep = overlaySpec.representation.copy(colorSpace = userRep.colorSpace)
+                val prepRep = overlaySpec.representation.copy(
+                    colorSpace = userRep.colorSpace,
+                    alpha = if (overlaySpec.representation.pixelFormat.hasAlpha)
+                        Bitmap.Alpha.PREMULTIPLIED else Bitmap.Alpha.OPAQUE
+                )
                 Overlayer.makeOverlayConvAndDst(overlaySpec, compositedOverlayRes, prepRep, usingPreview = true)
                     .run { overlay2prep = first; prepBitmap = second }
 
@@ -1174,7 +1178,11 @@ class DeferredVideo private constructor(
             private val textBitmap: Bitmap
 
             init {
-                val prepRep = overlaySpec.representation.copy(colorSpace = userColorSpace)
+                val prepRep = overlaySpec.representation.copy(
+                    colorSpace = userColorSpace,
+                    alpha = if (overlaySpec.representation.pixelFormat.hasAlpha)
+                        Bitmap.Alpha.PREMULTIPLIED else Bitmap.Alpha.OPAQUE
+                )
                 Overlayer.makeOverlayConvAndDst(overlaySpec, compositedOverlayRes, prepRep, usingPreview = true)
                     .run { overlay2prep = first; prepBitmap = second }
 
@@ -1585,8 +1593,7 @@ class DeferredVideo private constructor(
              * information on which field inside that frame it refers to. This boolean retrofits that information.
              *
              * This field is only relevant when we're reading an interlaced image sequence and composite it onto an
-             * interlaced output video. As the former can never happen at this moment in time, this is really useless
-             * code at the moment, but we've kept it anyway in view of possible changes in the future.
+             * interlaced output video.
              */
             val fileSeqFirstField: Boolean,
             val x: Int,

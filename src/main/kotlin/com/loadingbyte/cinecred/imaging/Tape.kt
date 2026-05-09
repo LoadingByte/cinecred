@@ -9,10 +9,12 @@ import java.lang.ref.SoftReference
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import javax.swing.UIManager
 import kotlin.concurrent.withLock
 import kotlin.io.path.*
+import kotlin.jvm.optionals.getOrNull
 import kotlin.math.atan
 import kotlin.math.hypot
 import kotlin.math.min
@@ -23,8 +25,10 @@ class Tape private constructor(
     val fileSeq: Boolean,
     val fileOrDir: Path,
     private val fileOrPattern: Path,
-    firstNumber: Int,
-    lastNumber: Int
+    private val firstNumber: Int,
+    private val lastNumber: Int,
+    parent: Tape?,
+    private val reinterpretation: Reinterpretation?
 ) : AutoCloseable {
 
     /* ******************************
@@ -62,7 +66,12 @@ class Tape private constructor(
             else -> m as Metadata
         }
 
-    private val metadataLazy = lazy {
+    private val metadataLazy: Lazy<Any> = lazy {
+        if (parent != null && reinterpretation != null)
+            return@lazy when (val m = parent.metadataLazy.value) {
+                is Metadata -> Metadata(reinterpretation.ofFrameSpec(m.spec), m.fps, m.availableRange)
+                else -> m
+            }
         try {
             val spec: Bitmap.Spec
             val fps: FPS?
@@ -98,33 +107,76 @@ class Tape private constructor(
         }
     }
 
+    private val reinterpretedTapes =
+        Collections.synchronizedMap(object : LinkedHashMap<Reinterpretation, Tape>(16, 0.75f, true) {
+            override fun removeEldestEntry(eldest: Map.Entry<Reinterpretation, Tape>) = size > 4
+        })
+
+    /** The returned tape is "dependent" because it will be closed when this parent tape is closed. */
+    fun dependentReinterpretedTape(
+        range: Bitmap.Range,
+        colorSpace: ColorSpace,
+        yuvCoefficients: Bitmap.YUVCoefficients?,
+        alpha: Bitmap.Alpha,
+        scan: Bitmap.Scan,
+        content: Bitmap.Content
+    ): Tape {
+        val viewSettings = Reinterpretation(range, colorSpace, yuvCoefficients, alpha, scan, content)
+        return reinterpretedTapes.computeIfAbsent(viewSettings) {
+            Tape(fileSeq, fileOrDir, fileOrPattern, firstNumber, lastNumber, parent = this, viewSettings)
+        }
+    }
+
 
     /* *****************************
        ********** PREVIEW **********
        ***************************** */
 
-    private var fileSeqPreviewCache: PreviewCache<Picture.Raster?>? = null
+    private var fileSeqPreviewCache: PreviewCache<Optional<Picture.Raster>>? = null
     private var containerPreviewCache: PreviewCache<List<RasterPictureAndClock>>? = null
 
     init {
-        if (fileSeq)
-            fileSeqPreviewCache = PreviewCache(fileOrDir.name, 500, 50) { startFrames ->
+        val reinterpretParentPreview = parent != null && reinterpretation != null && try {
+            val parentRep = parent.spec.representation
+            reinterpretation.range == parentRep.range &&
+                    reinterpretation.yuvCoefficients == parentRep.yuvCoefficients
+        } catch (_: IllegalStateException) {
+            // The tape is unreadable, so it doesn't matter what we return here.
+            true
+        }
+        if (reinterpretParentPreview) {
+            if (fileSeq)
+                fileSeqPreviewCache = MappingPreviewCache(parent.fileSeqPreviewCache!!, mapItem = { optional ->
+                    optional.map(reinterpretation::ofPreview)
+                }, closeItem = { optional -> optional.getOrNull()?.close() })
+            else
+                containerPreviewCache = MappingPreviewCache(parent.containerPreviewCache!!, mapItem = { list ->
+                    list.map { elem -> RasterPictureAndClock(reinterpretation.ofPreview(elem.picture), elem.clock) }
+                }, closeItem = { list -> for (elem in list) elem.picture.close() })
+        } else if (fileSeq)
+            fileSeqPreviewCache = LoadingPreviewCache(fileOrDir.name, 500, 50, createLoader = { startFrames ->
                 val reader = VideoReader(fileOrPattern, Timecode.Frames(startFrames))
-                object : AbstractPreviewCacheLoader<Picture.Raster?>(reader) {
-                    override fun loadNextItem() = reader.read()?.let(::toPreviewPicture)
+                object : AbstractPreviewCacheLoader<Optional<Picture.Raster>>(reader, reinterpretation) {
+                    override fun loadNextItem() =
+                        reader.read()
+                            ?.let { f -> reinterpretation?.ofFrame(f) ?: f }
+                            ?.let { f -> toPreviewPicture(f).also { f.bitmap.close() } }
+                            .let(Optional<*>::ofNullable)
                 }
-            }
+            }, closeItem = { optional -> optional.getOrNull()?.close() })
         else
-            containerPreviewCache = PreviewCache(fileOrDir.name, 10, 1) { startSeconds ->
+            containerPreviewCache = LoadingPreviewCache(fileOrDir.name, 10, 1, createLoader = { startSeconds ->
                 val reader = VideoReader(fileOrPattern, Timecode.Clock(startSeconds.toLong(), 1L))
-                object : AbstractPreviewCacheLoader<List<RasterPictureAndClock>>(reader) {
+                object : AbstractPreviewCacheLoader<List<RasterPictureAndClock>>(reader, reinterpretation) {
                     var curSeconds = startSeconds - 1
                     var over: VideoReader.Frame? = null
                     override fun loadNextItem(): List<RasterPictureAndClock> {
                         curSeconds++
                         val item = mutableListOf<RasterPictureAndClock>()
                         while (true) {
-                            val readFrame = over?.also { over = null } ?: reader.read() ?: return item
+                            val readFrame = over?.also { over = null }
+                                ?: reader.read()?.let { f -> reinterpretation?.ofFrame(f) ?: f }
+                                ?: return item
                             val readFrameSeconds = (readFrame.timecode as Timecode.Clock).seconds
                             if (readFrameSeconds > curSeconds) {
                                 over = readFrame
@@ -136,20 +188,23 @@ class Tape private constructor(
                         }
                     }
                 }
-            }
+            }, closeItem = { list -> for (elem in list) elem.picture.close() })
     }
 
     private class RasterPictureAndClock(val picture: Picture.Raster, val clock: Timecode.Clock)
 
-    private abstract class AbstractPreviewCacheLoader<I>(val reader: VideoReader) : PreviewCache.Loader<I> {
+    private abstract class AbstractPreviewCacheLoader<I>(
+        private val reader: VideoReader,
+        private val reinterpretation: Reinterpretation?
+    ) : LoadingPreviewCache.Loader<I> {
 
         private val pictureSpec: Bitmap.Spec
         private var tape2picture: BitmapConverter? = null
 
         init {
-            val (tapeW, tapeH) = reader.spec.resolution
-            val tapeRep = reader.spec.representation
-            val tapeHasAlpha = tapeRep.pixelFormat.hasAlpha
+            val tapeSpec = reader.spec.let { reinterpretation?.ofFrameSpec(it) ?: it }
+            val (tapeW, tapeH) = tapeSpec.resolution
+            val tapeRep = tapeSpec.representation
             val maxDim = previewResolution.coerceAtLeast(16)
             val previewRes = when {
                 tapeW <= maxDim && tapeH <= maxDim ->
@@ -159,10 +214,10 @@ class Tape private constructor(
                 else ->
                     Resolution(roundingDiv(maxDim * tapeW, tapeH).coerceAtLeast(1), maxDim)
             }
-            val pictureRep = Picture.Raster.compatibleRepresentation(tapeRep.colorSpace!!.primaries, tapeHasAlpha)
+            val pictureRep = Picture.Raster.compatibleRepresentation(tapeRep.colorSpace!!, tapeRep.alpha)
             pictureSpec = Bitmap.Spec(previewRes, pictureRep)
             setupSafely({
-                tape2picture = BitmapConverter(reader.spec, pictureSpec, srcAligned = false, approxTransfer = true)
+                tape2picture = BitmapConverter(tapeSpec, pictureSpec, srcAligned = false, approxTransfer = true)
             }, ::close)
         }
 
@@ -185,7 +240,7 @@ class Tape private constructor(
             return CompletableFuture.completedFuture(null)
 
         if (fileSeq) {
-            return fileSeqPreviewCache!!.getItem((timecode as Timecode.Frames).frames)
+            return fileSeqPreviewCache!!.getItem((timecode as Timecode.Frames).frames).thenApply { it.getOrNull() }
         } else {
             val previewFrame = getContainerPreviewFrame(timecode, (timecode as Timecode.Clock).seconds)
             // For video files, start loading in the next second if it's not already loaded to ensure fluid playback.
@@ -214,7 +269,9 @@ class Tape private constructor(
     fun toClockTimecode(timecode: Timecode.ExactFramesInSecond): Timecode.Clock? =
         containerPreviewCache!!.getItem(timecode.seconds).get().getOrNull(timecode.frames)?.clock
 
+    /** Also closes all tapes created via [dependentReinterpretedTape]. */
     override fun close() {
+        reinterpretedTapes.values.forEach(Tape::close)
         fileSeqPreviewCache?.close()
         containerPreviewCache?.close()
     }
@@ -242,7 +299,7 @@ class Tape private constructor(
         fun recognize(fileOrDir: Path): Tape? = when {
             fileOrDir.isRegularFile() ->
                 if (fileOrDir.extension !in CONTAINER_EXTS) null else
-                    Tape(fileSeq = false, fileOrDir, fileOrDir, -1, -1)
+                    Tape(fileSeq = false, fileOrDir, fileOrDir, -1, -1, null, null)
             fileOrDir.isAccessibleDirectory(thatContainsNonHiddenFiles = true) ->
                 try {
                     fileOrDir.useDirectoryEntries { seq -> recognizeFileSeq(fileOrDir, seq) }
@@ -348,7 +405,7 @@ class Tape private constructor(
             }
 
             val pattern = dir.resolve(prefix + (if (zeroPad) "%0${sameLen}d" else "%d") + suffix)
-            return Tape(fileSeq = true, dir, pattern, numbers.first(), numbers.last())
+            return Tape(fileSeq = true, dir, pattern, numbers.first(), numbers.last(), null, null)
         }
 
         @Volatile var previewResolution: Int = 128
@@ -404,7 +461,7 @@ class Tape private constructor(
                 behind?.run { bitmap.close() }
                 behind = ahead
                 ahead = null  // Prevent double close if the following read throws and close is called as a consequence.
-                ahead = videoReader.read()
+                ahead = videoReader.read()?.let { f -> reinterpretation?.ofFrame(f) ?: f }
             }
             return behind!!
         }
@@ -422,25 +479,83 @@ class Tape private constructor(
     }
 
 
-    private class PreviewCache<I>(
+    private data class Reinterpretation(
+        val range: Bitmap.Range,
+        val colorSpace: ColorSpace,
+        val yuvCoefficients: Bitmap.YUVCoefficients?,
+        val alpha: Bitmap.Alpha,
+        val scan: Bitmap.Scan,
+        val content: Bitmap.Content
+    ) {
+
+        private fun ofFrameRep(rep: Bitmap.Representation): Bitmap.Representation =
+            Bitmap.Representation(rep.pixelFormat, range, colorSpace, yuvCoefficients, rep.chromaLocation, alpha)
+
+        fun ofFrameSpec(spec: Bitmap.Spec): Bitmap.Spec =
+            Bitmap.Spec(spec.resolution, ofFrameRep(spec.representation), scan, content)
+
+        fun ofFrame(frame: VideoReader.Frame): VideoReader.Frame =
+            VideoReader.Frame(frame.bitmap.reinterpretedView(ofFrameSpec(frame.bitmap.spec)), frame.timecode)
+                .also { frame.bitmap.close() }
+
+        fun ofPreview(picture: Picture.Raster): Picture.Raster {
+            val (res, rep) = picture.bitmap.spec
+            val newRep = Bitmap.Representation(rep.pixelFormat, rep.range, colorSpace, alpha)
+            return Picture.Raster(picture.bitmap.reinterpretedView(Bitmap.Spec(res, newRep)))
+        }
+
+    }
+
+
+    private interface PreviewCache<I : Any> : AutoCloseable {
+        /** The returned future fails with a [ClosedException] if the cache is closed. */
+        fun getItem(point: Int): CompletableFuture<I>
+    }
+
+    private class ClosedException : IllegalStateException("Tape preview cache has been closed.")
+
+
+    private class MappingPreviewCache<I : Any>(
+        private val delegate: PreviewCache<I>,
+        private val mapItem: (I) -> I,
+        private val closeItem: (I) -> Unit
+    ) : PreviewCache<I> {
+
+        private val cache = ConcurrentHashMap<Int, I>()
+
+        override fun getItem(point: Int): CompletableFuture<I> {
+            cache[point]?.let { return CompletableFuture.completedFuture(it) }
+            return delegate.getItem(point).thenApply { item ->
+                cache.computeIfAbsent(point) { mapItem(item) }
+            }
+        }
+
+        override fun close() {
+            delegate.close()
+            cache.values.forEach(closeItem)
+            cache.clear()
+        }
+
+    }
+
+
+    private class LoadingPreviewCache<I : Any>(
         private val tapeName: String,
         private val ahead: Int,
         private val inertia: Int,
-        private val createLoader: (start: Int) -> Loader<I>
-    ) {
+        private val createLoader: (start: Int) -> Loader<I>,
+        private val closeItem: (I) -> Unit
+    ) : PreviewCache<I> {
 
         interface Loader<I> : AutoCloseable {
             fun loadNextItem(): I
         }
 
-        class ClosedException : IllegalStateException("Tape preview cache has been closed.")
-
         private val lock = ReentrantLock()
         private val slices = TreeSet<BaseSlice<I>>()
         private var closed = false
 
-        /** The returned future fails with a [ClosedException] if the cache is closed. */
-        fun getItem(point: Int): CompletableFuture<I> = lock.withLock {
+        override fun getItem(point: Int): CompletableFuture<I> = lock.withLock {
             if (closed)
                 return CompletableFuture.failedFuture(ClosedException())
             require(point >= 0)
@@ -480,13 +595,13 @@ class Tape private constructor(
             return future
         }
 
-        fun close() {
+        override fun close() {
             val slices = lock.withLock {
                 closed = true
                 slices.toMutableList().also { slices.clear() }
             }
             for (slice in slices)
-                (slice as Slice).close()
+                (slice as Slice).close(closeItem)
         }
 
         private open class BaseSlice<I>(val start: Int) : Comparable<BaseSlice<I>> {
@@ -546,16 +661,11 @@ class Tape private constructor(
                 futures?.forEach { it.complete(item) }
             }
 
-            fun close() {
-                val futures = lock.withLock {
-                    closed = true
-                    buildList {
-                        for (futures in pendingFutures)
-                            futures?.let(::addAll)
-                    }
-                }
-                for (future in futures)
-                    future.completeExceptionally(ClosedException())
+            fun close(closeItem: (I) -> Unit) {
+                lock.withLock { closed = true }
+                (items ?: softItems?.get())?.forEach(closeItem)
+                for (futures in pendingFutures)
+                    futures?.forEach { future -> future.completeExceptionally(ClosedException()) }
             }
 
         }

@@ -982,7 +982,7 @@ private fun TapeStyle.toEmbedded(styling: Styling): DeferredImage.EmbeddedTape? 
     embeddedTapeCache.get(styling, this) { createEmbedded(styling) }
 
 private fun TapeStyle.createEmbedded(styling: Styling): DeferredImage.EmbeddedTape? {
-    val tap = tape.tape ?: return null
+    val tap = reinterpretTape(this) ?: return null
     val rng: OpenEndRange<Timecode>
     try {
         tap.loadMetadata()  // Make sure that if the tape's metadata fails to load, the exception is thrown here.
@@ -1022,6 +1022,72 @@ private fun TapeStyle.createEmbedded(styling: Styling): DeferredImage.EmbeddedTa
     } catch (_: IllegalArgumentException) {
         null
     }
+}
+
+private fun reinterpretTape(style: TapeStyle): Tape? {
+    val tape = style.tape.tape ?: return null
+    val spec =
+        try {
+            tape.spec
+        } catch (_: IllegalStateException) {
+            return null
+        }
+    val rep = spec.representation
+
+    val range =
+        if (rep.pixelFormat.isFloat || style.range.value == null) rep.range else when (style.range.value) {
+            Range.FULL -> Bitmap.Range.FULL
+            Range.LIMITED -> Bitmap.Range.LIMITED
+        }
+    val primaries =
+        if (style.primaries.value == null) rep.colorSpace!!.primaries else try {
+            ColorSpace.Primaries.of(style.primaries.value)
+        } catch (_: IllegalArgumentException) {
+            return null
+        }
+    val transfer =
+        if (style.transfer.value == null) rep.colorSpace!!.transfer else try {
+            ColorSpace.Transfer.of(style.transfer.value)
+        } catch (_: IllegalArgumentException) {
+            return null
+        }
+    val yuvCoefficients =
+        if (rep.pixelFormat.family != Bitmap.PixelFormat.Family.YUV || style.yuvCoefficients.value == null) rep.yuvCoefficients else try {
+            Bitmap.YUVCoefficients.of(style.yuvCoefficients.value)
+        } catch (_: IllegalArgumentException) {
+            return null
+        }
+    val alpha =
+        if (!rep.pixelFormat.hasAlpha || style.alpha.value == null) rep.alpha else when (style.alpha.value) {
+            Alpha.STRAIGHT -> Bitmap.Alpha.STRAIGHT
+            Alpha.PREMULTIPLIED -> Bitmap.Alpha.PREMULTIPLIED
+        }
+    val scan = if (style.scan.value == null) spec.scan else when (style.scan.value) {
+        Scan.PROGRESSIVE -> Bitmap.Scan.PROGRESSIVE
+        Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST,
+        Scan.INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
+            Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST
+        Scan.INTERLACED_BOT_SHOWN_FIRST_AND_TOP_CODED_FIRST,
+        Scan.INTERLACED_BOT_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
+            Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST
+    }
+    val content = if (style.scan.value == null) spec.content else when (style.scan.value) {
+        Scan.PROGRESSIVE -> Bitmap.Content.PROGRESSIVE_FRAME
+        Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST,
+        Scan.INTERLACED_BOT_SHOWN_FIRST_AND_TOP_CODED_FIRST ->
+            Bitmap.Content.INTERLEAVED_FIELDS
+        Scan.INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST,
+        Scan.INTERLACED_BOT_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
+            Bitmap.Content.INTERLEAVED_FIELDS_REVERSED
+    }
+
+    val colorSpace = ColorSpace.of(primaries, transfer)
+    if (range == rep.range && colorSpace == rep.colorSpace && yuvCoefficients == rep.yuvCoefficients &&
+        alpha == rep.alpha && scan == spec.scan && content == spec.content
+    )
+        return tape
+    else
+        return tape.dependentReinterpretedTape(range, colorSpace, yuvCoefficients, alpha, scan, content)
 }
 
 private fun coerceTimecode(tc: Timecode?, tape: Tape, styling: Styling): Timecode? = when {

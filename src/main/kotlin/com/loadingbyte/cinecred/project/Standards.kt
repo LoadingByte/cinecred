@@ -261,7 +261,13 @@ val PRESET_TAPE_STYLE = TapeStyle(
     fadeInFrames = 0,
     fadeInTransitionStyleName = "",
     fadeOutFrames = 0,
-    fadeOutTransitionStyleName = ""
+    fadeOutTransitionStyleName = "",
+    range = Override(null),
+    primaries = Override(null),
+    transfer = Override(null),
+    yuvCoefficients = Override(null),
+    alpha = Override(null),
+    scan = Override(null)
 )
 
 

@@ -387,7 +387,13 @@ data class TapeStyle(
     val fadeInFrames: Int,
     val fadeInTransitionStyleName: String,
     val fadeOutFrames: Int,
-    val fadeOutTransitionStyleName: String
+    val fadeOutTransitionStyleName: String,
+    val range: Override<Range>,
+    val primaries: Override<Int>,
+    val transfer: Override<Int>,
+    val yuvCoefficients: Override<Int>,
+    val alpha: Override<Alpha>,
+    val scan: Override<Scan>
 ) : PopupStyle
 
 
@@ -420,6 +426,18 @@ class TapeSlice(
     override fun hashCode() = 31 * (inPoint?.hashCode() ?: 0) + (outPoint?.hashCode() ?: 0)
     override fun toString() = "TapeSlice(inPoint=$inPoint, outPoint=$outPoint)"
 
+}
+
+
+enum class Range { FULL, LIMITED }
+enum class Alpha { STRAIGHT, PREMULTIPLIED }
+
+enum class Scan {
+    PROGRESSIVE,
+    INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST,
+    INTERLACED_BOT_SHOWN_FIRST_AND_BOT_CODED_FIRST,
+    INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST,
+    INTERLACED_BOT_SHOWN_FIRST_AND_TOP_CODED_FIRST
 }
 
 

@@ -432,7 +432,7 @@ class DeliveryDestTemplate(val uuid: UUID, val name: String, str: String) {
         PROJECT, CREDITS_FILENAME("ui.projects.create.creditsFilename"),
         SPREADSHEET("ui.deliverConfig.spreadsheet"), FIRST_PAGE, LAST_PAGE,
         FORMAT_CATEGORY, FORMAT("ui.deliverRenderQueue.format"), BIT_DEPTH("bitDepth"),
-        WIDTH("width"), HEIGHT("height"), FRAME_RATE("ui.styling.global.fps"), SCAN("ui.deliverConfig.scan"),
+        WIDTH("width"), HEIGHT("height"), FRAME_RATE("ui.styling.global.fps"), SCAN("scan"),
         CHANNELS, GAMUT("gamut"), EOTF(fixedTag = "EOTF"),
         YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, TIME_ZONE;
 

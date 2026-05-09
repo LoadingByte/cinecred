@@ -2,13 +2,10 @@ package com.loadingbyte.cinecred.project
 
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.common.Severity.*
-import com.loadingbyte.cinecred.imaging.Color4f
-import com.loadingbyte.cinecred.imaging.DeferredImage
-import com.loadingbyte.cinecred.imaging.Font
+import com.loadingbyte.cinecred.imaging.*
 import com.loadingbyte.cinecred.imaging.Font.Companion.MANAGED_FEATURES
 import com.loadingbyte.cinecred.imaging.Font.Companion.PETITE_CAPS_FEATURE
 import com.loadingbyte.cinecred.imaging.Font.Companion.SMALL_CAPS_FEATURE
-import com.loadingbyte.cinecred.imaging.Transition
 import com.loadingbyte.cinecred.project.BlockOrientation.HORIZONTAL
 import com.loadingbyte.cinecred.project.BlockOrientation.VERTICAL
 import com.loadingbyte.cinecred.project.BodyLayout.FLOW
@@ -487,7 +484,10 @@ private val TAPE_STYLE_CONSTRAINTS: List<StyleConstraint<TapeStyle, *>> = listOf
         WARN, TapeStyle::fadeInTransitionStyleName.st(), TapeStyle::fadeOutTransitionStyleName.st(),
         styleClass = TransitionStyle::class.java,
         choices = { styling, _ -> styling.transitionStyles }
-    )
+    ),
+    FixedChoiceConstr(ERROR, TapeStyle::primaries.st(), choices = ColorSpace.Primaries.CODES),
+    FixedChoiceConstr(ERROR, TapeStyle::transfer.st(), choices = ColorSpace.Transfer.CODES),
+    FixedChoiceConstr(ERROR, TapeStyle::yuvCoefficients.st(), choices = Bitmap.YUVCoefficients.CODES)
 )
 
 
@@ -516,17 +516,17 @@ class DoubleConstr<S : Style>(
 ) : StyleConstraint<S, StyleSetting<S, Double>>(setting)
 
 
-class FixedChoiceConstr<S : Style, SUBJ : Enum<SUBJ>>(
+class FixedChoiceConstr<S : Style, SUBJ : Any>(
     val severity: Severity,
     vararg settings: StyleSetting<S, SUBJ>,
-    val choices: EnumSet<SUBJ>
+    val choices: Collection<SUBJ>
 ) : StyleConstraint<S, StyleSetting<S, SUBJ>>(*settings)
 
 
-class DynChoiceConstr<S : Style, SUBJ : Enum<SUBJ>>(
+class DynChoiceConstr<S : Style, SUBJ : Any>(
     val severity: Severity,
     vararg settings: StyleSetting<S, SUBJ>,
-    val choices: (Styling, S) -> EnumSet<SUBJ>
+    val choices: (Styling, S) -> Collection<SUBJ>
 ) : StyleConstraint<S, StyleSetting<S, SUBJ>>(*settings)
 
 

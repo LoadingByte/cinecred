@@ -3,6 +3,8 @@ package com.loadingbyte.cinecred.ui.styling
 import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.TimecodeFormat
 import com.loadingbyte.cinecred.common.l10n
+import com.loadingbyte.cinecred.imaging.Bitmap
+import com.loadingbyte.cinecred.imaging.ColorSpace
 import com.loadingbyte.cinecred.imaging.DeferredImage
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.ui.helper.*
@@ -484,8 +486,109 @@ private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listO
     UnionWidgetSpec(
         TapeStyle::fadeOutFrames.st(), TapeStyle::fadeOutTransitionStyleName.st(),
         unionLabelL10nKey = "ui.styling.page.cardFadeOut", settingIcons = listOf(null, TRANSITION_ICON)
+    ),
+    NewSectionWidgetSpec(TapeStyle::range.st()),
+    WidthWidgetSpec(TapeStyle::range.st(), WidthSpec.WIDE),
+    OverrideWidgetSpec(
+        TapeStyle::range.st(),
+        getDefaultValue = { _, style ->
+            when (tapeSpec(style)?.representation?.range) {
+                Bitmap.Range.FULL, null -> Range.FULL
+                Bitmap.Range.LIMITED -> Range.LIMITED
+            }
+        }
+    ),
+    LabelWidgetSpec(TapeStyle::primaries.st(), labelL10nKey = "gamut"),
+    WidthWidgetSpec(TapeStyle::primaries.st(), WidthSpec.WIDE),
+    NumberWidgetSpec(
+        TapeStyle::primaries.st(),
+        toString = { code ->
+            if (code == -1) "" else try {
+                "CICP $code \u2013 ${ColorSpace.Primaries.of(code).name}"
+            } catch (_: IllegalArgumentException) {
+                "CICP $code"
+            }
+        }
+    ),
+    OverrideWidgetSpec(
+        TapeStyle::primaries.st(),
+        getDefaultValue = { _, style ->
+            tapeSpec(style)?.representation?.colorSpace?.primaries?.code ?: -1
+        }
+    ),
+    LabelWidgetSpec(TapeStyle::transfer.st(), label = "EOTF"),
+    WidthWidgetSpec(TapeStyle::transfer.st(), WidthSpec.WIDE),
+    NumberWidgetSpec(
+        TapeStyle::transfer.st(),
+        toString = { code ->
+            if (code == -1) "" else try {
+                "CICP $code \u2013 ${ColorSpace.Transfer.of(code).name}"
+            } catch (_: IllegalArgumentException) {
+                "CICP $code"
+            }
+        }
+    ),
+    OverrideWidgetSpec(
+        TapeStyle::transfer.st(),
+        getDefaultValue = { _, style ->
+            tapeSpec(style)?.representation?.colorSpace?.transfer?.canonCode ?: -1
+        }
+    ),
+    LabelWidgetSpec(TapeStyle::yuvCoefficients.st(), label = "YUV"),
+    WidthWidgetSpec(TapeStyle::yuvCoefficients.st(), WidthSpec.WIDE),
+    NumberWidgetSpec(
+        TapeStyle::yuvCoefficients.st(),
+        toString = { code ->
+            if (code == -1) "" else try {
+                "CICP $code \u2013 ${Bitmap.YUVCoefficients.of(code).name}"
+            } catch (_: IllegalArgumentException) {
+                "CICP $code"
+            }
+        }
+    ),
+    OverrideWidgetSpec(
+        TapeStyle::yuvCoefficients.st(),
+        getDefaultValue = { _, style ->
+            tapeSpec(style)?.representation?.yuvCoefficients?.code ?: -1
+        }
+    ),
+    WidthWidgetSpec(TapeStyle::alpha.st(), WidthSpec.WIDE),
+    OverrideWidgetSpec(
+        TapeStyle::alpha.st(),
+        getDefaultValue = { _, style ->
+            when (tapeSpec(style)?.representation?.alpha) {
+                Bitmap.Alpha.OPAQUE, Bitmap.Alpha.STRAIGHT, null -> Alpha.STRAIGHT
+                Bitmap.Alpha.PREMULTIPLIED -> Alpha.PREMULTIPLIED
+            }
+        }
+    ),
+    LabelWidgetSpec(TapeStyle::scan.st(), labelL10nKey = "scan"),
+    WidthWidgetSpec(TapeStyle::scan.st(), WidthSpec.WIDE),
+    OverrideWidgetSpec(
+        TapeStyle::scan.st(),
+        getDefaultValue = { _, style ->
+            val spec = tapeSpec(style)
+            when (spec?.scan) {
+                Bitmap.Scan.PROGRESSIVE, null -> Scan.PROGRESSIVE
+                Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST -> when (spec.content) {
+                    Bitmap.Content.INTERLEAVED_FIELDS_REVERSED -> Scan.INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST
+                    else -> Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST
+                }
+                Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST -> when (spec.content) {
+                    Bitmap.Content.INTERLEAVED_FIELDS_REVERSED -> Scan.INTERLACED_BOT_SHOWN_FIRST_AND_BOT_CODED_FIRST
+                    else -> Scan.INTERLACED_BOT_SHOWN_FIRST_AND_TOP_CODED_FIRST
+                }
+            }
+        }
     )
 )
+
+private fun tapeSpec(style: TapeStyle) =
+    try {
+        style.tape.tape?.spec
+    } catch (_: IllegalStateException) {
+        null
+    }
 
 private fun basicEmbeddedTape(style: TapeStyle, width: Int?, height: Int?) =
     try {
@@ -533,10 +636,11 @@ class WidthWidgetSpec<S : Style>(
 ) : StyleWidgetSpec<S, StyleSetting<S, Any>>(setting)
 
 
-class NumberWidgetSpec<S : Style>(
-    setting: StyleSetting<S, Number>,
-    val step: Number? = null
-) : StyleWidgetSpec<S, StyleSetting<S, Number>>(setting)
+class NumberWidgetSpec<S : Style, SUBJ : Number>(
+    setting: StyleSetting<S, SUBJ>,
+    val step: SUBJ? = null,
+    val toString: ((SUBJ) -> String)? = null
+) : StyleWidgetSpec<S, StyleSetting<S, SUBJ>>(setting)
 
 
 class ToggleButtonGroupWidgetSpec<S : Style, SUBJ : Any>(

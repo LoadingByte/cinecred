@@ -258,7 +258,7 @@ class DeliverConfigurationForm(private val deliveryCtrl: DeliveryCtrlComms) :
             l10n("ui.styling.global.fps"),
             UnionWidget(
                 listOf(fpsScalingWidget, scanWidget, depthWidget),
-                labels = listOf(null, l10n("ui.deliverConfig.scan"), l10n("bitDepth"))
+                labels = listOf(null, l10n("scan"), l10n("bitDepth"))
             )
         )
     }

@@ -164,6 +164,8 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
                 populateCodeBased()
             }
 
+            val CODES: List<Int> = CODE_BASED.filterNotNull().map(Primaries::code)
+
             /** @throws IllegalArgumentException If the [code] does not refer to primaries. */
             fun of(code: Int): Primaries =
                 requireNotNull(CODE_BASED.getOrNull(code)) { "Unknown primaries code: $code" }
@@ -375,6 +377,8 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
             init {
                 populateCodeBased()
             }
+
+            val CODES: List<Int> = CODE_BASED.filterNotNull().mapTo(sortedSetOf(), Transfer::canonCode).toList()
 
             /** @throws IllegalArgumentException If the [code] does not refer to transfer characteristics. */
             fun of(code: Int): Transfer =

@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.imaging
 
 import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.*
+import com.loadingbyte.cinecred.imaging.Bitmap.Alpha
 import com.loadingbyte.cinecred.imaging.pdf.PDFDrawer
 import com.loadingbyte.cinecred.ui.helper.newLabelEditorPane
 import com.loadingbyte.cinecred.ui.helper.tryBrowse
@@ -65,19 +66,17 @@ sealed interface Picture : AutoCloseable {
 
     class Raster(
         /**
-         * A planar float32 RBG(A) bitmap with full range, linear transfer characteristics, and premultiplied alpha.
+         * A progressive planar float32 RBG(A) bitmap.
          *
          * We have chosen that format as it can directly be understood by zimg, which we use for scaling and other
-         * transformations before passing the result to Skia for blitting. We use premultiplied alpha because scaling is
-         * performed with premultiplied alpha, so we want the picture to already be in the correct format for that.
+         * transformations before passing the result to Skia for blitting.
          */
         val bitmap: Bitmap
     ) : Picture {
 
         init {
-            val rep = bitmap.spec.representation
-            val cs = requireNotNull(rep.colorSpace) { "Cannot create picture from a bitmap without a color space." }
-            require(bitmap.spec.representation == compatibleRepresentation(cs.primaries, rep.pixelFormat.hasAlpha))
+            val pixFmtCode = bitmap.spec.representation.pixelFormat.code
+            require(pixFmtCode == AV_PIX_FMT_GBRPF32 || pixFmtCode == AV_PIX_FMT_GBRAPF32)
             require(bitmap.spec.scan == Bitmap.Scan.PROGRESSIVE)
         }
 
@@ -125,17 +124,17 @@ sealed interface Picture : AutoCloseable {
 
         companion object {
 
-            fun compatibleRepresentation(primaries: ColorSpace.Primaries, hasAlpha: Boolean) = Bitmap.Representation(
-                Bitmap.PixelFormat.of(if (hasAlpha) AV_PIX_FMT_GBRAPF32 else AV_PIX_FMT_GBRPF32),
-                ColorSpace.of(primaries, ColorSpace.Transfer.LINEAR),
-                if (hasAlpha) Bitmap.Alpha.PREMULTIPLIED else Bitmap.Alpha.OPAQUE
-            )
+            fun compatibleRepresentation(colorSpace: ColorSpace, alpha: Alpha): Bitmap.Representation =
+                Bitmap.Representation(
+                    Bitmap.PixelFormat.of(if (alpha == Alpha.OPAQUE) AV_PIX_FMT_GBRPF32 else AV_PIX_FMT_GBRAPF32),
+                    colorSpace, alpha
+                )
 
             /** After this method returns, [bitmap] may be closed without affecting the new picture object. */
             fun convert(bitmap: Bitmap): Raster {
                 val (res, rep, scan) = bitmap.spec
                 val cs = requireNotNull(rep.colorSpace) { "Cannot create picture from a bitmap without a color space." }
-                val requiredRep = compatibleRepresentation(cs.primaries, rep.pixelFormat.hasAlpha)
+                val requiredRep = compatibleRepresentation(cs, rep.alpha)
                 val newBitmap = when {
                     rep != requiredRep ->
                         Bitmap.allocate(Bitmap.Spec(res, requiredRep)).also { BitmapConverter.convert(bitmap, it) }

@@ -226,14 +226,30 @@ class StyleForm<S : Style>(
         val colorConstr = settingConstraints.oneOf<ColorConstr<S>>()
         val siblingOrdinalConstr = settingConstraints.oneOf<SiblingOrdinalConstr<*>>()
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
-        val numberWidgetSpec = settingWidgetSpecs.oneOf<NumberWidgetSpec<S>>()
+        val numberWidgetSpec = settingWidgetSpecs.oneOf<NumberWidgetSpec<S, Number>>()
         val toggleButtonGroupWidgetSpec = settingWidgetSpecs.oneOf<ToggleButtonGroupWidgetSpec<S, *>>()
         val multiplierWidgetSpec = settingWidgetSpecs.oneOf<MultiplierWidgetSpec<S>>()
         val timecodeWidgetSpec = settingWidgetSpecs.oneOf<TimecodeWidgetSpec<S>>()
 
         val widthSpec = widthWidgetSpec?.widthSpec
 
-        val widget = when (setting.type) {
+        val widget = if ((fixedChoiceConstr != null || dynChoiceConstr != null || styleNameConstr != null) &&
+            toggleButtonGroupWidgetSpec == null
+        )
+            InconsistentComboBoxWidget(
+                setting.type,
+                items = fixedChoiceConstr?.run { choices.toList().requireIsInstance(setting.type) }
+                    ?: emptyList(),
+                toString = { item ->
+                    when (item) {
+                        is Enum<*> -> item.label
+                        is Number if numberWidgetSpec?.toString != null -> numberWidgetSpec.toString(item)
+                        else -> item.toString()
+                    }
+                },
+                widthSpec
+            )
+        else when (setting.type) {
             Int::class.javaPrimitiveType, Int::class.javaObjectType -> {
                 val min = intConstr?.min
                 val max = intConstr?.max
@@ -267,15 +283,7 @@ class StyleForm<S : Style>(
                 )
                 else -> CheckBoxWidget()
             }
-            String::class.java -> when {
-                fixedChoiceConstr != null || dynChoiceConstr != null || styleNameConstr != null ->
-                    InconsistentComboBoxWidget(
-                        String::class.java,
-                        items = fixedChoiceConstr?.run { choices.toList().requireIsInstance() } ?: emptyList(),
-                        widthSpec = widthSpec
-                    )
-                else -> TextWidget(widthSpec)
-            }
+            String::class.java -> TextWidget(widthSpec)
             Locale::class.java -> InconsistentComboBoxWidget(
                 Locale::class.java,
                 Locale.getAvailableLocales()
@@ -302,12 +310,6 @@ class StyleForm<S : Style>(
                         getFixedIcon = toggleButtonGroupWidgetSpec.getFixedIcon,
                         dynIcons = toggleButtonGroupWidgetSpec.getDynIcon != null,
                         inconsistent = dynChoiceConstr != null
-                    )
-                    fixedChoiceConstr != null || dynChoiceConstr != null -> InconsistentComboBoxWidget(
-                        setting.type,
-                        items = fixedChoiceConstr?.run { choices.toList().requireIsInstance(setting.type) }
-                            ?: emptyList(),
-                        toString = { (it as Enum<*>).label }, widthSpec
                     )
                     else -> ComboBoxWidget(
                         setting.type, setting.type.enumConstants.asList(), toString = { (it as Enum<*>).label },

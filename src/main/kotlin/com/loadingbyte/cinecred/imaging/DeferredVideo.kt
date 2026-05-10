@@ -333,19 +333,28 @@ class DeferredVideo private constructor(
 
         private val workWidth = closestWorkResolution(userSpec.resolution.widthPx, userPixelFormat.hChromaSub)
         private val workHeight = closestWorkResolution(userSpec.resolution.heightPx, userPixelFormat.vChromaSub)
-        private val workResolution = Resolution(workWidth, workHeight)
 
-        private val userWorkSpec = userSpec.copy(resolution = workResolution)
-        private val canvasWorkSpec = Bitmap.Spec(workResolution, canvasRepresentation)
+        private val userIWorkSpec =
+            userSpec.copy(resolution = Resolution(workWidth, workHeight))
+        private val userPWorkSpec =
+            userIWorkSpec.copy(scan = Bitmap.Scan.PROGRESSIVE, content = Bitmap.Content.PROGRESSIVE_FRAME)
+        private val canvasIWorkSpec =
+            userIWorkSpec.copy(representation = canvasRepresentation)
+        private val canvasPWorkSpec =
+            canvasIWorkSpec.copy(scan = Bitmap.Scan.PROGRESSIVE, content = Bitmap.Content.PROGRESSIVE_FRAME)
 
-        private val canvas2user = BitmapConverter(
-            canvasWorkSpec, userWorkSpec, promiseOpaque = grounding != null, approxTransfer = randomAccessDraftMode
+        private val canvasP2userP = BitmapConverter(
+            canvasPWorkSpec, userPWorkSpec, promiseOpaque = grounding != null, approxTransfer = randomAccessDraftMode
+        )
+        private val canvasI2userI = BitmapConverter(
+            canvasIWorkSpec, userIWorkSpec, promiseOpaque = grounding != null, approxTransfer = randomAccessDraftMode
         )
 
         override fun close() {
-            canvas2user.close()
-            blankCanvasBitmap.close()
-            blankUserBitmap.close()
+            canvasP2userP.close()
+            canvasI2userI.close()
+            blankCanvasPBitmap.close()
+            blankUserPBitmap.close()
             pageCache.close()
             for (userData in tapeTracker.collectUserData())
                 userData.close()
@@ -389,19 +398,21 @@ class DeferredVideo private constructor(
             }
         }
 
-        private val blankCanvasBitmap: Bitmap
-        private val blankUserBitmap: Bitmap
+        private val blankCanvasPBitmap: Bitmap
+        private val blankUserPBitmap: Bitmap
         private val pageCache: PageCache<Render>
 
         init {
-            blankCanvasBitmap = Bitmap.allocate(canvasWorkSpec)
-            blankUserBitmap = Bitmap.allocate(userWorkSpec)
+            blankCanvasPBitmap = Bitmap.allocate(canvasPWorkSpec)
+            blankUserPBitmap = Bitmap.allocate(userPWorkSpec)
             if (grounding != null) {
-                Canvas.forBitmap(blankCanvasBitmap, canvasCeiling).use { it.fill(Canvas.Shader.Solid(grounding)) }
-                canvas2user.convert(blankCanvasBitmap, blankUserBitmap)
+                Canvas.forBitmap(blankCanvasPBitmap.zero(), canvasCeiling).use { canvas ->
+                    canvas.fill(Canvas.Shader.Solid(grounding))
+                }
+                canvasP2userP.convert(blankCanvasPBitmap, blankUserPBitmap)
             } else {
-                blankCanvasBitmap.zero()
-                blankUserBitmap.zero()
+                blankCanvasPBitmap.zero()
+                blankUserPBitmap.zero()
             }
 
             pageCache = object : PageCache<Render>(
@@ -486,14 +497,14 @@ class DeferredVideo private constructor(
             val r = responses.singleOrNull()
             return when {
                 responses.isEmpty() -> {
-                    val bitmap = if (useCanvasRep) blankCanvasBitmap else blankUserBitmap
+                    val bitmap = if (useCanvasRep) blankCanvasPBitmap else blankUserPBitmap
                     Frame(bitmap, writable = false, shift = 0)
                 }
                 r is PageCache.Response.Render && r.alpha == 1.0 -> when {
                     !useCanvasRep -> Frame(r.render.userBitmap, writable = false, shift = r.shift)
                     grounding == null -> Frame(r.render.transparCanvasOrDraftBitmap, writable = false, shift = r.shift)
                     else -> {
-                        val bitmap = Bitmap.allocate(canvasWorkSpec)
+                        val bitmap = Bitmap.allocate(canvasPWorkSpec)
                         Canvas.forBitmap(bitmap, canvasCeiling).use { canvas ->
                             canvas.fill(Canvas.Shader.Solid(grounding))
                             canvas.drawImageFast(r.render.transparCanvasOrDraftBitmap, y = -r.shift)
@@ -502,8 +513,8 @@ class DeferredVideo private constructor(
                     }
                 }
                 blendInUserColorSpace -> {
-                    val bitmap = Bitmap.allocate(userWorkSpec)
-                    bitmap.blit(blankUserBitmap)
+                    val bitmap = Bitmap.allocate(userPWorkSpec)
+                    bitmap.blit(blankUserPBitmap)
                     for (resp in pageCache.query(progressiveFrameIdx)) {
                         check(resp is PageCache.Response.Render)  // In draft mode, there are no micro shifts.
                         draftComposite(resp.render.transparCanvasOrDraftBitmap, bitmap, 0, -resp.shift, resp.alpha)
@@ -511,7 +522,7 @@ class DeferredVideo private constructor(
                     Frame(bitmap, writable = true, shift = 0)
                 }
                 else -> {
-                    val canvasBitmap = Bitmap.allocate(canvasWorkSpec)
+                    val canvasBitmap = Bitmap.allocate(canvasPWorkSpec)
                     Canvas.forBitmap(canvasBitmap, canvasCeiling).use { canvas ->
                         if (grounding == null) canvasBitmap.zero() else canvas.fill(Canvas.Shader.Solid(grounding))
                         for (resp in pageCache.query(progressiveFrameIdx))
@@ -526,7 +537,8 @@ class DeferredVideo private constructor(
                                     )
                             }
                     }
-                    val bitmap = if (useCanvasRep) canvasBitmap else canvas2userAndClose(canvasBitmap)
+                    val bitmap = if (useCanvasRep) canvasBitmap else Bitmap.allocate(userPWorkSpec)
+                        .also { canvasP2userP.convert(canvasBitmap, it); canvasBitmap.close() }
                     Frame(bitmap, writable = true, shift = 0)
                 }
             }
@@ -549,7 +561,7 @@ class DeferredVideo private constructor(
             val sndSrcParity = 1 - fstSrcParity
             val fstDstParity = if (userSpec.content == Bitmap.Content.INTERLEAVED_FIELDS) fstSrcParity else sndSrcParity
             val sndDstParity = 1 - fstDstParity
-            val interleaved = Bitmap.allocate(if (useCanvasRep) canvasWorkSpec else userWorkSpec)
+            val interleaved = Bitmap.allocate(if (useCanvasRep) canvasIWorkSpec else userIWorkSpec)
             // It is important to query the earlier frame first, and also to immediately blit it, because the cache is
             // free to close it as soon as a later frame is queried (since sequentialAccess is true).
             val (fst, fstWritable, fstShift) = obtainStaticProgressiveFrame(frameIdx * 2, useCanvasRep)
@@ -574,7 +586,7 @@ class DeferredVideo private constructor(
             if (tapeResponses.isEmpty())
                 return static
             val composite = if (static.writable) static.bitmap else
-                Bitmap.allocate(if (compInCanvasRep) canvasWorkSpec else userWorkSpec)
+                Bitmap.allocate(if (compInCanvasRep) canvasPWorkSpec else userPWorkSpec)
                     .apply { blit(static.bitmap, 0, static.shift, workWidth, workHeight, 0, 0, 1) }
             for (resp in tapeResponses) {
                 val userData = takeTapeUserData(resp)
@@ -583,7 +595,8 @@ class DeferredVideo private constructor(
                 }
                 dropTapeUserData(resp, frameIdx)
             }
-            val userComposite = if (!compInCanvasRep) composite else canvas2userAndClose(composite)
+            val userComposite = if (!compInCanvasRep) composite else Bitmap.allocate(userPWorkSpec)
+                .also { canvasP2userP.convert(composite, it); composite.close() }
             return Frame(userComposite, writable = true, shift = 0)
         }
 
@@ -598,7 +611,8 @@ class DeferredVideo private constructor(
             val sndDstParity = 1 - fstDstParity
             overlayInterlacedTapes(composite, frameIdx * 2, fstTapeResponses, fstSrcParity, fstDstParity)
             overlayInterlacedTapes(composite, frameIdx * 2 + 1, sndTapeResponses, sndSrcParity, sndDstParity)
-            val userComposite = if (!compInCanvasRep) composite else canvas2userAndClose(composite)
+            val userComposite = if (!compInCanvasRep) composite else Bitmap.allocate(userIWorkSpec)
+                .also { canvasI2userI.convert(composite, it); composite.close() }
             return Frame(userComposite, writable = true, shift = 0)
         }
 
@@ -1241,13 +1255,6 @@ class DeferredVideo private constructor(
                 return size
             val n = 1 shl chromaSub
             return size + n - (size and (n - 1))
-        }
-
-        private fun canvas2userAndClose(src: Bitmap): Bitmap {
-            val dst = Bitmap.allocate(userWorkSpec)
-            canvas2user.convert(src, dst)
-            src.close()
-            return dst
         }
 
     }

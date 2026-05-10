@@ -753,10 +753,10 @@ class DeferredVideo private constructor(
                         readCrop = embeddedTape.crop
                     }
 
+                    var convertedSpec = origSpec
                     // If the pixel format directly from the source has chroma subsampling, insert a converter stage
                     // to an otherwise equivalent non-subsampled pixel format. This is necessary for interlaced export,
                     // cropping, and reordering, but for simplicity, we simply always do it.
-                    var convertedSpec = origSpec
                     val pixFmt = origSpec.representation.pixelFormat
                     if (pixFmt.hasChromaSub) {
                         val alpha = pixFmt.hasAlpha
@@ -788,12 +788,20 @@ class DeferredVideo private constructor(
                             }
                             else -> if (le) AV_PIX_FMT_YUVA444P16LE else AV_PIX_FMT_YUVA444P16BE  // fallback
                         }
-                        convertedSpec = origSpec.copy(
-                            representation = origSpec.representation.copy(
+                        convertedSpec = convertedSpec.copy(
+                            representation = convertedSpec.representation.copy(
                                 pixelFormat = Bitmap.PixelFormat.of(convertedPixFmtCode),
                                 chromaLocation = AVCHROMA_LOC_UNSPECIFIED
                             )
                         )
+                    }
+                    // If the source yields reversed interleaved fields, and we produce progressive output, flip the
+                    // field coding order now so that we can later reinterpret the interlaced frame as progressive.
+                    if (origSpec.content == Bitmap.Content.INTERLEAVED_FIELDS_REVERSED &&
+                        userSpec.scan == Bitmap.Scan.PROGRESSIVE
+                    )
+                        convertedSpec = convertedSpec.copy(content = Bitmap.Content.INTERLEAVED_FIELDS)
+                    if (convertedSpec !== origSpec) {
                         readConverter = BitmapConverter(origSpec, convertedSpec)
                         readConvertedSpec = convertedSpec
                     }

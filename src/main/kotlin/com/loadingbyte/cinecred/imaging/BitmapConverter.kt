@@ -408,7 +408,20 @@ class BitmapConverter(
                     }
 
                     // Blit stage
-                    link(BLIT, !ali, fmt, pri, trc, pmu, con, res)
+                    for (toFmt in fmt..fmtObjs.lastIndex)
+                        if (fmtObj == fmtObjs[toFmt]) {
+                            link(BLIT, true, toFmt, pri, trc, pmu, con, res)
+                            link(BLIT, false, toFmt, pri, trc, pmu, con, res)
+                            for ((toCon, toConObj) in conObjs.withIndex())
+                                if (conObj == Bitmap.Content.INTERLEAVED_FIELDS &&
+                                    toConObj == Bitmap.Content.INTERLEAVED_FIELDS_REVERSED ||
+                                    conObj == Bitmap.Content.INTERLEAVED_FIELDS_REVERSED &&
+                                    toConObj == Bitmap.Content.INTERLEAVED_FIELDS
+                                ) {
+                                    link(BLIT, true, toFmt, pri, trc, pmu, toCon, res)
+                                    link(BLIT, false, toFmt, pri, trc, pmu, toCon, res)
+                                }
+                        }
 
                     // Planar float stage & limited X2RGB10BE stage & SWS stage
                     // Note: We first give our planar float stage a chance, because converting to PF is preferred over
@@ -662,10 +675,20 @@ class BitmapConverter(
        ************************************************** */
 
 
+    /** This stage blits the source onto the destination, and can also flip coded field order. */
     private object BlitStage : Stage {
 
         override fun process(src: Bitmap, dst: Bitmap) {
-            dst.blit(src)
+            val srcC = src.spec.content
+            val dstC = dst.spec.content
+            if (srcC == Bitmap.Content.INTERLEAVED_FIELDS && dstC == Bitmap.Content.INTERLEAVED_FIELDS_REVERSED ||
+                dstC == Bitmap.Content.INTERLEAVED_FIELDS && srcC == Bitmap.Content.INTERLEAVED_FIELDS_REVERSED
+            ) {
+                val (w, h) = src.spec.resolution
+                dst.blit(src, 0, 0, w, h - 1, 0, 1, 2)
+                dst.blit(src, 0, 1, w, h - 1, 0, 0, 2)
+            } else
+                dst.blit(src)
         }
 
         override fun close() {}

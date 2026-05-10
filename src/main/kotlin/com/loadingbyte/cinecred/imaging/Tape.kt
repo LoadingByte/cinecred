@@ -411,7 +411,7 @@ class Tape private constructor(
         @Volatile var previewResolution: Int = 128
 
         private val PREVIEW_OUTLINE = run {
-            val font = Font.system(UIManager.getFont("defaultFont").getFontName(Locale.ROOT))
+            val font = UIManager.getFont("defaultFont")?.let { Font.system(it.getFontName(Locale.ROOT)) }
                 ?: Font.bundled("Source Sans Pro Regular")!!
             GlyphString.of(l10n("imaging.tapePreview"), font.case())
                 .appendOutlineTo(Path2D.Float(), 0.0, 0.0)

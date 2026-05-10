@@ -143,10 +143,6 @@ tasks.withType<KotlinCompile>().configureEach {
     compilerOptions.jvmTarget = JvmTarget.fromTarget(jdkVersion.toString())
 }
 
-tasks.test {
-    useJUnitPlatform()
-}
-
 
 val writeVersionFile by tasks.registering(WriteFile::class) {
     text = version.toString()
@@ -240,7 +236,6 @@ run {
     val mainClass_ = mainClass
     val jvmArgs_ = listOf(
         "-Djava.library.path=${platformNatives.get().destinationDir}",
-        "-splash:${tasks.processResources.get().destinationDir}/$splashScreen",
         "--add-modules", addModules.joinToString(",")
     ) + addOpens.flatMap { listOf("--add-opens", "$it=ALL-UNNAMED") } + javaOptions.split(" ")
 
@@ -250,7 +245,7 @@ run {
         dependsOn(platformNatives)
         classpath(sourceSets.main.map { it.runtimeClasspath })
         mainClass = mainClass_
-        jvmArgs = jvmArgs_
+        jvmArgs = jvmArgs_ + "-splash:${tasks.processResources.get().destinationDir}/$splashScreen"
     }
 
     tasks.register<JavaExec>("runDemo") {
@@ -260,6 +255,12 @@ run {
         classpath(sourceSets.named("demo").map { it.runtimeClasspath })
         mainClass = "com.loadingbyte.cinecred.DemoMain"
         jvmArgs = jvmArgs_ + listOf("--add-opens", "java.desktop/javax.swing=ALL-UNNAMED")
+    }
+
+    tasks.test {
+        useJUnitPlatform()
+        dependsOn(platformNatives)
+        jvmArgs = jvmArgs_
     }
 }
 

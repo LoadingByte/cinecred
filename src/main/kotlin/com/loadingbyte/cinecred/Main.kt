@@ -48,6 +48,7 @@ private const val SINGLETON_APP_ID = "com.loadingbyte.cinecred"
 var demoCallback: (() -> Unit)? = null
 
 private lateinit var masterCtrl: MasterCtrlComms
+private val didSetupNatives = AtomicBoolean()
 private val hasCrashed = AtomicBoolean()
 
 
@@ -69,6 +70,29 @@ fun main(args: Array<String>) {
     // Add new logging handlers.
     rootLogger.addHandler(ConsoleHandler().apply { formatter = JULFormatter })
     rootLogger.addHandler(JULBuilderHandler)
+
+    // Set up the native libraries.
+    setupNatives()
+
+    // Make PDFBox store its font cache in our config directory.
+    System.setProperty("pdfbox.fontcache", CONFIG_DIR.absolutePathString())
+
+    // Already load the currently connected DeckLink devices so that they can be later passed to clients all in one go.
+    // This is important because one client preselects the last selected device from the first device list it gets.
+    DeckLink.preload()
+
+    // Regularly suggest to run the GC. Without this, the GC usually only runs when there's memory pressure, but as our
+    // configured maximum heap size is pretty large, there is rarely pressure. Thus, a lot of garbage lingers around on
+    // the heap and fills up the user's precious RAM.
+    Timer("GCCaller", true).schedule(0, 60_000) { System.gc() }
+
+    SwingUtilities.invokeLater { mainSwing(args) }
+}
+
+
+fun setupNatives() {
+    if (didSetupNatives.getAndSet(true))
+        return
 
     // Load our native libraries.
     System.loadLibrary("clib")
@@ -95,20 +119,6 @@ fun main(args: Array<String>) {
     avcodec.av_jni_set_java_vm(Loader.getJavaVM(), null)
     // Redirect FFmpeg's logging output to slf4j.
     avutil.setLogCallback(FFmpegLogCallback)
-
-    // Make PDFBox store its font cache in our config directory.
-    System.setProperty("pdfbox.fontcache", CONFIG_DIR.absolutePathString())
-
-    // Already load the currently connected DeckLink devices so that they can be later passed to clients all in one go.
-    // This is important because one client preselects the last selected device from the first device list it gets.
-    DeckLink.preload()
-
-    // Regularly suggest to run the GC. Without this, the GC usually only runs when there's memory pressure, but as our
-    // configured maximum heap size is pretty large, there is rarely pressure. Thus, a lot of garbage lingers around on
-    // the heap and fills up the user's precious RAM.
-    Timer("GCCaller", true).schedule(0, 60_000) { System.gc() }
-
-    SwingUtilities.invokeLater { mainSwing(args) }
 }
 
 

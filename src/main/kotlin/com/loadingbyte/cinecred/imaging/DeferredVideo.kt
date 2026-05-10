@@ -406,6 +406,7 @@ class DeferredVideo private constructor(
 
             pageCache = object : PageCache<Render>(
                 progressiveVideo,
+                userSpec.representation.pixelFormat.vChromaSub,
                 sequentialAccess = !randomAccessDraftMode,
                 preloading = true
             ) {
@@ -416,8 +417,7 @@ class DeferredVideo private constructor(
                     // pre-rendered in the background. As such, we can't use any BitmapConverters or other stateful
                     // objects in this method!
 
-                    val h = closestWorkResolution(height, userPixelFormat.vChromaSub)
-                    val resolution = Resolution(workWidth, h)
+                    val resolution = Resolution(workWidth, height)
 
                     // Materialize each micro shift to a transparent canvas bitmap.
                     val renderCanvasSpec = Bitmap.Spec(resolution, canvasRepresentation)
@@ -877,11 +877,20 @@ class DeferredVideo private constructor(
                 } else {
                     require(!blendInUserColorSpace) { "Interlaced processing does not support user CS blending." }
                     val compositedOverlayRes = resp.embeddedTape.resolution.run { Resolution(widthPx, heightPx / 2) }
-                    // It is easier to rely on Bitmap's spec inference than to construct these specs ourselves.
-                    val dummyBitmap = Bitmap.allocate(readSpec)
-                    val topFieldOverlaySpec = dummyBitmap.topFieldView().use { it.spec }
-                    val botFieldOverlaySpec = dummyBitmap.botFieldView().use { it.spec }
-                    dummyBitmap.close()
+                    val topFieldOverlaySpec: Bitmap.Spec
+                    val botFieldOverlaySpec: Bitmap.Spec
+                    if (readSpec.scan == Bitmap.Scan.PROGRESSIVE) {
+                        topFieldOverlaySpec = Bitmap.Spec(
+                            readSpec.resolution.run { Resolution(widthPx, heightPx / 2) }, readSpec.representation,
+                            Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST, Bitmap.Content.ONLY_TOP_FIELD
+                        )
+                        botFieldOverlaySpec = topFieldOverlaySpec.copy(content = Bitmap.Content.ONLY_BOT_FIELD)
+                    } else
+                        Bitmap.allocate(readSpec).use { dummyBitmap ->
+                            // It is easier to rely on Bitmap's spec inference than to construct these specs ourselves.
+                            topFieldOverlaySpec = dummyBitmap.topFieldView().use { it.spec }
+                            botFieldOverlaySpec = dummyBitmap.botFieldView().use { it.spec }
+                        }
                     frameOverlayer = null
                     topFieldOverlayer = QualityOverlayer(
                         canvasRep, canvasCeiling, userRep, topFieldOverlaySpec, compositedOverlayRes, usePreview
@@ -1262,6 +1271,7 @@ class DeferredVideo private constructor(
      */
     private abstract class PageCache<R : AutoCloseable>(
         private val video: DeferredVideo,
+        private val vChromaSub: Int,
         private val sequentialAccess: Boolean,
         private val preloading: Boolean
     ) {
@@ -1272,26 +1282,31 @@ class DeferredVideo private constructor(
         private val lastChunkIndices = IntArray(video.instructions.size)
 
         init {
+            val yMask = -(1 shl vChromaSub)
+
             // We make the chunks larger than the spacing between two chunks so that a chunk can be scrolled for some
             // time and then immediately the next chunk can be swapped in, without the need to stitch the two chunks.
-            // We further add 1 to the height to make room for the micro shift (which is between 0 and 1) at the bottom.
-            val maxChunkHeight = max(video.height + MIN_CHUNK_BUFFER, MAX_CHUNK_PIXELS / video.width)
-            chunkSpacing = maxChunkHeight - (video.height + 1)
+            // We further add 2^vChromaSub to the height to make room for the micro shift (which is between 0 and
+            // 2^vChromaSub) at the bottom.
+            val maxChunkHeight = max(video.height + MIN_CHUNK_BUFFER, MAX_CHUNK_PIXELS / video.width) and yMask
+            chunkSpacing = (maxChunkHeight - (video.height + (1 shl vChromaSub))) and yMask
 
             // Declare chunks for all instructions.
             for ((insnIdx, insn) in video.instructions.withIndex()) {
                 class CountedMicroShift(val microShift: Double, var count: Int)
 
                 // Find the min and max shifts in the current instruction. Also collect all distinct micro shifts:
-                // a micro shift is the deviation from an integer shift, and hence lies between 0 and 1.
+                // a micro shift is the deviation from the preceding integer shift aligned with the vertical chroma
+                // subsampling, and hence lies between 0 and 2^vChromaSub.
                 var minShift = 0.0
                 var maxShift = 0.0
-                val countedMicroShifts = if (video.roundShifts) null else mutableListOf<CountedMicroShift>()
+                val countedMicroShifts =
+                    if (video.roundShifts && vChromaSub == 0) null else mutableListOf<CountedMicroShift>()
                 for (shift in insn.shifts) {
                     minShift = min(minShift, shift)
                     maxShift = max(maxShift, shift)
                     if (countedMicroShifts != null) {
-                        val microShift = shift - floor(shift)
+                        val microShift = shift.mod((1 shl vChromaSub).toDouble())
                         // Check whether this micro shift is already present in our collection.
                         val cms = countedMicroShifts.find { abs(it.microShift - microShift) < EPS }
                         // If it is, increase its multiplicity. Otherwise, add the new micro shift to the collection.
@@ -1300,8 +1315,8 @@ class DeferredVideo private constructor(
                 }
 
                 // This is the smallest vertical area that covers the requests of all instructions.
-                val minY = floor(minShift).toInt()
-                val maxY = ceil(maxShift).toInt() + video.height
+                val minY = floor(minShift).toInt() and yMask
+                val maxY = (ceil(maxShift).toInt() + video.height + yMask.inv()) and yMask
 
                 val microShifts = when {
                     // If all shifts are integers, the only micro shift that occurs is 0.
@@ -1387,13 +1402,15 @@ class DeferredVideo private constructor(
             if (microShiftedRenders != null) chunk.semaphore.release() else microShiftedRenders = loadChunk(chunk)
             // Determine the micro shift for the given shift and select the corresponding cached render that can be
             // passed to the consumer with only integer shifting.
-            val microShift = shift - floor(shift)
+            val microShift = shift.mod((1 shl vChromaSub).toDouble())
             return when (val imageIdx = chunk.microShifts.indexOfFirst { abs(it - microShift) < EPS }) {
                 // If no cached render could be found for the micro shift at hand, directly pass the deferred image
                 // to the consumer. This is slower than using cached renders, but it's our only option.
                 -1 -> Response.Image(chunk.image, shift, alpha)
                 // Otherwise, pass the found cached render.
-                else -> Response.Render(microShiftedRenders[imageIdx], floor(shift).toInt() - chunk.shift, alpha)
+                else -> Response.Render(
+                    microShiftedRenders[imageIdx], round(shift - microShift).toInt() - chunk.shift, alpha
+                )
             }
         }
 

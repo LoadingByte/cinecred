@@ -52,6 +52,7 @@ Cinecred Changelog
 - Embedded videos with chroma subsampling no longer prevent interlaced export.
 - Exported PDFs no longer duplicate pictures, thereby reducing file size.
 - PDF export no longer inverts vertical shearing.
+- Video export no longer sometimes misplaces vertical chroma subsamples.
 - Timeline export no longer fails upon encountering an image sequence.
 
 ### UI Fixes

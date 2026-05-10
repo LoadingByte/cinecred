@@ -139,6 +139,7 @@ class Bitmap private constructor(
     /** This method is guaranteed to return a new instance, which can be [close]d without closing the original one. */
     fun view(x: Int, y: Int, width: Int, height: Int, yStep: Int): Bitmap {
         val (specWidth, specHeight) = spec.resolution
+        val pixelFormat = spec.representation.pixelFormat
         require(x >= 0) { "Left view coordinate $x is < 0." }
         require(y >= 0) { "Top view coordinate $y is < 0." }
         require(width >= 1) { "View width $width is < 1." }
@@ -146,6 +147,10 @@ class Bitmap private constructor(
         require(yStep >= 1) { "Vertical view step $yStep is < 1." }
         require(x + width <= specWidth) { "Right view coordinate $x + $width exceeds bitmap width $specWidth." }
         require(y + height <= specHeight) { "Bottom view coordinate $y + $height exceeds bitmap height $specHeight." }
+        require(x % (1 shl pixelFormat.hChromaSub) == 0) { "Left view coordinate $x misaligns w/ h subsampling." }
+        require(y % (1 shl pixelFormat.vChromaSub) == 0) { "Top view coordinate $y misaligns w/ v subsampling." }
+        if (pixelFormat.vChromaSub != 0)
+            require(yStep == 1) { "Under vertical chroma subsampling, the vertical view step must be 1, not $yStep." }
         val viewResolution = Resolution(width, ceilDiv(height, yStep))
         val evenY = y % 2 == 0
         val evenYSkip = yStep % 2 == 0
@@ -166,7 +171,6 @@ class Bitmap private constructor(
         }
         return allocateWithoutBufAndSetup(spec.copy(resolution = viewResolution, content = viewContent)) { viewFrame ->
             requireNotClosed { referenceBuffers(frame, viewFrame) }
-            val pixelFormat = spec.representation.pixelFormat
             for (plane in 0..<pixelFormat.planes) {
                 val ls = linesize(plane)
                 val step = pixelFormat.stepOfPlane(plane)
@@ -323,6 +327,7 @@ class Bitmap private constructor(
     fun blit(src: Bitmap, srcX: Int, srcY: Int, srcWidth: Int, srcHeight: Int, dstX: Int, dstY: Int, yStep: Int) {
         val (srcSpecWidth, srcSpecHeight) = src.spec.resolution
         val (dstSpecWidth, dstSpecHeight) = spec.resolution
+        val pixelFormat = spec.representation.pixelFormat
         require(spec.representation == src.spec.representation) { "Source and dest bitmap representations differ." }
         require(srcX >= 0) { "Source x coordinate $srcX is < 0." }
         require(srcY >= 0) { "Source y coordinate $srcY is < 0." }
@@ -335,9 +340,12 @@ class Bitmap private constructor(
         require(dstX + srcWidth <= dstSpecWidth) { "$dstX + $srcWidth exceeds dest width $dstSpecWidth." }
         require(srcY + srcHeight <= srcSpecHeight) { "$srcY + $srcHeight exceeds source height $srcSpecHeight." }
         require(dstY + srcHeight <= dstSpecHeight) { "$dstY + $srcHeight exceeds dest height $dstSpecHeight." }
+        require(srcX % (1 shl pixelFormat.hChromaSub) == 0) { "Source x coordinate $srcX misaligns w/ h subsampling." }
+        require(srcY % (1 shl pixelFormat.vChromaSub) == 0) { "Source y coordinate $srcY misaligns w/ v subsampling." }
+        require(dstX % (1 shl pixelFormat.hChromaSub) == 0) { "Dest y coordinate $dstX misaligns w/ h subsampling." }
+        require(dstY % (1 shl pixelFormat.vChromaSub) == 0) { "Dest y coordinate $dstY misaligns w/ v subsampling." }
         if (spec.representation.pixelFormat.vChromaSub != 0)
             require(yStep == 1) { "Under vertical chroma subsampling, the vertical blit step must be 1, not $yStep." }
-        val pixelFormat = spec.representation.pixelFormat
         for (plane in 0..<pixelFormat.planes) {
             val srcSeg = src.memorySegment(plane)
             val dstSeg = memorySegment(plane)
@@ -380,6 +388,10 @@ class Bitmap private constructor(
         require(dstComponent in dstPixelFormat.components) { "Dest component does not belong to dest." }
         require(srcComponent.depth == dstComponent.depth) { "Source and dest components have different depths." }
         require(componentSize in 1..2 || componentSize == 4) { "Component has not 1, 2, or 4 bytes." }
+        require(srcPixelFormat.hChromaSubOfPlane(srcComponent.plane) == 0) { "Source has horizontal subsampling." }
+        require(srcPixelFormat.vChromaSubOfPlane(srcComponent.plane) == 0) { "Source has vertical subsampling." }
+        require(dstPixelFormat.hChromaSubOfPlane(dstComponent.plane) == 0) { "Dest has horizontal subsampling." }
+        require(dstPixelFormat.vChromaSubOfPlane(dstComponent.plane) == 0) { "Dest has vertical subsampling." }
         val (width, height) = spec.resolution
         val srcSeg = src.memorySegment(srcComponent.plane)
         val dstSeg = memorySegment(dstComponent.plane)

@@ -11,10 +11,8 @@ Running
 Cinecred requires JDK 25. Gradle's toolchain mechanism enforces that version,
 but automatic JDK downloading is disabled.
 
-Depending on your platform, use the command `gradle runOnWindows`,
-`gradle runOnMacX86`, `gradle runOnMacARM`, or `gradle runOnLinux` to build the
-software, collect all native libraries for the platform, and then run it with
-the necessary arguments.
+Use the command `gradle run` to build the software, collect all native libraries
+for your platform, and then run it with the necessary arguments.
 
 
 Releasing

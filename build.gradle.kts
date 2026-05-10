@@ -228,7 +228,14 @@ val platformNativesTasks = Platform.entries.associateWith { platform ->
 }
 
 
-for (platform in Platform.entries) {
+run {
+    val os = System.getProperty("os.name").lowercase()
+    val platform = when {
+        os.startsWith("windows") -> Platform.WINDOWS
+        os.startsWith("mac") -> if (System.getProperty("os.arch") == "aarch64") Platform.MAC_ARM else Platform.MAC_X86
+        os.startsWith("linux") -> Platform.LINUX
+        else -> return@run
+    }
     val platformNatives = platformNativesTasks.getValue(platform)
     val mainClass_ = mainClass
     val jvmArgs_ = listOf(
@@ -236,17 +243,19 @@ for (platform in Platform.entries) {
         "-splash:${tasks.processResources.get().destinationDir}/$splashScreen",
         "--add-modules", addModules.joinToString(",")
     ) + addOpens.flatMap { listOf("--add-opens", "$it=ALL-UNNAMED") } + javaOptions.split(" ")
-    tasks.register<JavaExec>("runOn${platform.label.capitalized()}") {
+
+    tasks.register<JavaExec>("run") {
         group = "Execution"
-        description = "Runs the program on ${platform.label.capitalized()}."
+        description = "Runs the program."
         dependsOn(platformNatives)
         classpath(sourceSets.main.map { it.runtimeClasspath })
         mainClass = mainClass_
         jvmArgs = jvmArgs_
     }
-    tasks.register<JavaExec>("runDemoOn${platform.label.capitalized()}") {
+
+    tasks.register<JavaExec>("runDemo") {
         group = "Execution"
-        description = "Runs the demo on ${platform.label.capitalized()}."
+        description = "Runs the demo."
         dependsOn(platformNatives)
         classpath(sourceSets.named("demo").map { it.runtimeClasspath })
         mainClass = "com.loadingbyte.cinecred.DemoMain"

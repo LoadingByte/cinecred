@@ -72,8 +72,6 @@ class DeliveryCtrl(private val projectCtrl: ProjectController) : DeliveryCtrlCom
 
         val creditsIds = drawnProject.drawnCreditsBooks.flatMap { drCreditsBook ->
             drCreditsBook.drawnCredits
-                // Filter out credits which have 0 runtime, as the renderer is probably not expecting this case.
-                .filter { drCredits -> drCredits.video.numFrames > 0 }
                 .map { drCredits -> CreditsId(drCreditsBook.creditsBook.fileName, drCredits.credits.spreadsheetName) }
         }
         val creditsId = views.firstNotNullOfOrNull { view -> view.setCreditsIds(creditsIds) }

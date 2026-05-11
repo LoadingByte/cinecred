@@ -360,8 +360,6 @@ class PlaybackCtrl : PlaybackCtrlComms {
         this.drawnProject = drawnProject
         val avail = drawnProject.drawnCreditsBooks.flatMap { drCreditsBook ->
             drCreditsBook.drawnCredits
-                // Just to be sure, filter out spreadsheets which have 0 runtime.
-                .filter { drCredits -> drCredits.video.numFrames > 0 }
                 .map { drCredits -> CreditsId(drCreditsBook.creditsBook.fileName, drCredits.credits.spreadsheetName) }
         }
         if (creditsId !in avail)

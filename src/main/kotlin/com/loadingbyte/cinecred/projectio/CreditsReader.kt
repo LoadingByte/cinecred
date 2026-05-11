@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.projectio
 import com.google.common.collect.Iterators
 import com.google.common.collect.PeekingIterator
 import com.loadingbyte.cinecred.common.*
-import com.loadingbyte.cinecred.common.Severity.ERROR
 import com.loadingbyte.cinecred.common.Severity.WARN
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
@@ -350,10 +349,6 @@ private class CreditsReader(
         concludeCompound(0.0)
         concludeStage(0.0)
         concludePage()
-
-        // If there is not a single page, that's an error.
-        if (pages.isEmpty())
-            table.log(null, null, ERROR, l10n("projectIO.credits.noPages"))
 
         val (runtimeGroups, runtimeGroupSources) = runtimeGroupsWithSources.values.unzip()
         val credits = Credits(table.spreadsheet.name, pages.toPersistentList(), runtimeGroups.toPersistentList())

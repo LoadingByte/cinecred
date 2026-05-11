@@ -18,7 +18,18 @@ class PreviewCtrl(private val projectCtrl: ProjectController) : PreviewCtrlComms
 
     private val views = mutableListOf<PreviewViewComms>()
 
+    private var logHasErrors = false
     private var drawnProject: DrawnProject? = null
+
+    private fun switchCard() {
+        // If there are errors and no credits to show, display the big error mark.
+        val card = when {
+            !drawnProject?.drawnCreditsBooks.isNullOrEmpty() -> PreviewCard.PREVIEW
+            logHasErrors -> PreviewCard.ERROR
+            else -> PreviewCard.LOADING
+        }
+        for (view in views) view.setCard(card)
+    }
 
 
     /* ***************************
@@ -30,19 +41,15 @@ class PreviewCtrl(private val projectCtrl: ProjectController) : PreviewCtrlComms
     }
 
     override fun updateLog(log: List<ParserMsg>) {
-        // If there are errors in the log and updateProject() isn't called, an erroneous project has been opened.
-        // In that case, show the big error mark.
-        if (log.any { it.severity == Severity.ERROR } && drawnProject == null)
-            for (view in views) view.setCard(PreviewCard.ERROR)
+        logHasErrors = log.any { it.severity == Severity.ERROR }
+        switchCard()
     }
 
     override fun updateProject(drawnProject: DrawnProject) {
         this.drawnProject = drawnProject
+        switchCard()
         // Update the pages tabs.
-        for (view in views) {
-            view.setCard(PreviewCard.PREVIEW)
-            view.updateProject(drawnProject)
-        }
+        for (view in views) view.updateProject(drawnProject)
     }
 
     override fun switchCreditsBookTab(right: Boolean) = views.forEach { view -> view.switchCreditsBookTab(right) }

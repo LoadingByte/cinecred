@@ -69,6 +69,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
     private val tapes = HashMap<Path, Tape>()
 
     // These are set to true to force calls to the corresponding pushX() method upon initialization.
+    private var creditsWorkbooksChanged = true
     private var projectFontsChanged = true
     private var pictureLoadersChanged = true
     private var tapesChanged = true
@@ -147,9 +148,9 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
     }
 
     private fun reloadOrRemoveCreditsFiles(changedFiles: List<Path>) {
-        var push = false
         for (changedFile in changedFiles) if (!changedFile.isRegularFile() || changedFile.isHidden()) {
-            push = push || changedFile in creditsWorkbooks || changedFile in creditsLogs ||
+            creditsWorkbooksChanged = creditsWorkbooksChanged ||
+                    changedFile in creditsWorkbooks || changedFile in creditsLogs ||
                     changedFile in linkedCreditsWatchers
             creditsWorkbooks.remove(changedFile)
             creditsLogs.remove(changedFile)
@@ -191,7 +192,7 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                     val (spreadsheets, loadingLog) = fmt.read(changedFile, l10n("project.template.spreadsheetName"))
                     creditsWorkbooks[changedFile] = CreditsWorkbook(changedFile.name, changedFile.toUri(), spreadsheets)
                     creditsLogs[changedFile] = loadingLog
-                    push = true
+                    creditsWorkbooksChanged = true
                 }
             } catch (e: Exception) {
                 // General exceptions can occur if the credits file is ill-formatted.
@@ -202,11 +203,13 @@ class ProjectIntake(private val projectDir: Path, private val callbacks: Callbac
                 LOGGER.error("Could not read the credits file '{}'.", changedFile, e)
                 val msg = l10n("projectIO.credits.cannotReadCreditsFile", e.userNotification)
                 creditsLogs[changedFile] = listOf(ParserMsg(changedFile.name, null, null, null, null, ERROR, msg))
-                push = true
+                creditsWorkbooksChanged = true
             }
         }
-        if (push)
+        if (creditsWorkbooksChanged) {
+            creditsWorkbooksChanged = false
             pushCreditsWorkbooks()
+        }
     }
 
     private fun pushCreditsWorkbooks() {

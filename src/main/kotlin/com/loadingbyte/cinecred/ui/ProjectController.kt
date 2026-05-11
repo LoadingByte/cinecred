@@ -221,9 +221,7 @@ class ProjectController(
     private fun process(input: Input) {
         val (creditsWorkbooks, _, projectFonts, pictureLoaders, tapes, origStyling) = input
         // If something hasn't been initialized yet, abort reading and drawing the credits.
-        if (creditsWorkbooks.isEmpty() ||
-            projectFonts == null || pictureLoaders == null || tapes == null || origStyling == null
-        )
+        if (projectFonts == null || pictureLoaders == null || tapes == null || origStyling == null)
             return doneProcessing(input, emptyList(), null, emptyList())
 
         // Execute the reading and drawing in another thread to not block the UI thread.
@@ -266,6 +264,14 @@ class ProjectController(
                 for (spreadsheet in creditsWorkbook.spreadsheets) {
                     val (curCredits, curLog, curRuntimeGroupSources) =
                         readCredits(creditsWorkbook.fileName, spreadsheet, styling, pictureLoaders, tapes)
+                    // If there is not a single page, that's an error.
+                    if (curCredits.pages.isEmpty()) {
+                        log += ParserMsg(
+                            creditsWorkbook.fileName, curCredits.spreadsheetName, null, null, null, ERROR,
+                            l10n("projectIO.credits.noPages")
+                        )
+                        continue
+                    }
                     credits += curCredits
                     log += curLog
                     runtimeGroupSources += curCredits.runtimeGroups.zip(curRuntimeGroupSources)
@@ -279,9 +285,12 @@ class ProjectController(
             //   - If the sheet refers to a new picture/tape style, automatically add it.
             //   - If the sheet no longer references an automatically added picture/tape style, remove it.
             //   - If a page style has legacy settings which were not used to produce a migration message, clear them.
+            //     But only if there is at least one valid credits sequence, to not prematurely clear legacy settings
+            //     while, e.g., waiting for an online service.
             addRemovePopupStyles(styling.pictureStyles, usedStyles)?.let { styling = styling.copy(pictureStyles = it) }
             addRemovePopupStyles(styling.tapeStyles, usedStyles)?.let { styling = styling.copy(tapeStyles = it) }
-            clearLegacyPageStyleSettings(styling.pageStyles, log)?.let { styling = styling.copy(pageStyles = it) }
+            if (creditsBooks.any { creditsBook -> creditsBook.credits.isNotEmpty() })
+                clearLegacyPageStyleSettings(styling.pageStyles, log)?.let { styling = styling.copy(pageStyles = it) }
 
             // If any of the above are the case, or if auxiliary references have been updated further up this method,
             // put an updated styling into the history in place of the old styling, but only if the styling didn't
@@ -305,8 +314,8 @@ class ProjectController(
 
             // Draw pages and video for each credits spreadsheet.
             val crushingStyles = HashMap<Style, MutableList<CreditsId>>()
-            val drawnCreditsBooks = creditsBooks.map { creditsBook ->
-                val drawnCredits = creditsBook.credits.map { curCredits ->
+            val drawnCreditsBooks = creditsBooks.mapNotNull { creditsBook ->
+                val drawnCredits = creditsBook.credits.mapNotNull { curCredits ->
                     val (drawnPages, crushedRuntimeGroups) = drawPages(styling, curCredits)
 
                     // For each crushed runtime group:
@@ -326,17 +335,27 @@ class ProjectController(
 
                     // Limit each page's height to prevent the program from crashing due to misconfiguration.
                     if (drawnPages.any { it.defImage.height.resolve() > 1_000_000.0 }) {
-                        val error = ParserMsg(
+                        log += ParserMsg(
                             creditsBook.fileName, curCredits.spreadsheetName, null, null, null, ERROR,
                             l10n("ui.edit.excessivePageSizeError")
                         )
-                        return@submit doneProcessing(input, log + error, null, emptyList())
+                        return@mapNotNull null
                     }
 
                     val video = drawVideo(styling, drawnPages)
+
+                    // Filter out credits which have 0 runtime to avoid edge cases downstream.
+                    if (video.numFrames == 0) {
+                        log += ParserMsg(
+                            creditsBook.fileName, curCredits.spreadsheetName, null, null, null, ERROR,
+                            l10n("ui.edit.zeroRuntimeError")
+                        )
+                        return@mapNotNull null
+                    }
+
                     DrawnCredits(curCredits, drawnPages.toPersistentList(), video)
                 }
-                DrawnCreditsBook(creditsBook, drawnCredits.toPersistentList())
+                if (drawnCredits.isEmpty()) null else DrawnCreditsBook(creditsBook, drawnCredits.toPersistentList())
             }
 
             // For each style that crushes a runtime group, show a warning in the styling UI.

@@ -20,31 +20,33 @@ private:
 
 class UpcallingResourceProvider : public skresources::ResourceProvider {
 public:
-    UpcallingResourceProvider(loadImage_t loadImage) : fLoadImage(loadImage) {}
+    UpcallingResourceProvider(loadImage_t loadImage, freeImage_t freeImage) : fLoadImage(loadImage), fFreeImage(freeImage) {}
     sk_sp<SkData> load(const char[], const char[]) const override { return nullptr; }
     sk_sp<SkTypeface> loadTypeface(const char[], const char[]) const override { return nullptr; }
     sk_sp<SkData> loadFont(const char[], const char[]) const override { return nullptr; }
     sk_sp<skresources::ExternalTrackAsset> loadAudioAsset(const char[], const char[], const char[]) override { return nullptr; }
-    sk_sp<skresources::ImageAsset> loadImageAsset(const char path[], const char name[], const char id[]) const override {
+    sk_sp<skresources::ImageAsset> loadImageAsset(const char[], const char name[], const char[]) const override {
+        void* freeCtx;
         int w, h;
         unsigned char colorType, alphaType;
         SkColorSpace* colorSpace;
         void* pixels;
         long long rowBytes;
-        if (!fLoadImage(path, name, id, &w, &h, &colorType, &alphaType, &colorSpace, &pixels, &rowBytes))
+        if (!fLoadImage(name, &freeCtx, &w, &h, &colorType, &alphaType, &colorSpace, &pixels, &rowBytes))
             return nullptr;
         sk_sp<SkImage> image = SkImages::RasterFromPixmap(SkPixmap(
             SkImageInfo::Make(w, h, static_cast<SkColorType>(colorType), static_cast<SkAlphaType>(alphaType), sk_ref_sp(colorSpace)),
             pixels, rowBytes
-        ), nullptr, nullptr);
+        ), fFreeImage, freeCtx);
         return sk_sp(new SingleImageAsset(image));
     }
 private:
     loadImage_t fLoadImage;
+    freeImage_t fFreeImage;
 };
 
-SkSVGDOM* SkSVGDOM_Make(char* str, long long len, loadImage_t loadImage) {
-    return SkSVGDOM::Builder().setResourceProvider(sk_sp(new UpcallingResourceProvider(loadImage))).make(*SkMemoryStream::MakeDirect(str, len)).release();
+SkSVGDOM* SkSVGDOM_Make(char* str, long long len, loadImage_t loadImage, freeImage_t freeImage) {
+    return SkSVGDOM::Builder().setResourceProvider(sk_sp(new UpcallingResourceProvider(loadImage, freeImage))).make(*SkMemoryStream::MakeDirect(str, len)).release();
 }
 
 void SkSVGDOM_containerSize(SkSVGDOM* dom, float wh[2]) {

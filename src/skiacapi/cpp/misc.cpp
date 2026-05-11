@@ -38,9 +38,3 @@ SkColorSpace* SkColorSpace_MakeRGB(TRC_PARAMETERS, MATRIX33_PARAMETERS) {
     skcms_Matrix3x3 toXYZD50 = {{{ m00, m01, m02 }, { m10, m11, m12 }, { m20, m21, m22 }}};
     return SkColorSpace::MakeRGB(fn, toXYZD50).release();
 }
-
-SkData* SkICC_SkWriteICCProfile(TRC_PARAMETERS, MATRIX33_PARAMETERS) {
-    skcms_TransferFunction fn = { g, a, b, c, d, e, f };
-    skcms_Matrix3x3 toXYZD50 = {{{ m00, m01, m02 }, { m10, m11, m12 }, { m20, m21, m22 }}};
-    return SkWriteICCProfile(fn, toXYZD50).release();
-}

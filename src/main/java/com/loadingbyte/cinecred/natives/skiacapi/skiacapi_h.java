@@ -4021,86 +4021,12 @@ public class skiacapi_h extends skiacapi_h$shared {
         }
     }
 
-    private static class SkICC_SkWriteICCProfile {
-        public static final FunctionDescriptor DESC = FunctionDescriptor.of(
-            skiacapi_h.C_POINTER,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT,
-            skiacapi_h.C_FLOAT
-        );
-
-        public static final MemorySegment ADDR = SYMBOL_LOOKUP.findOrThrow("SkICC_SkWriteICCProfile");
-
-        public static final MethodHandle HANDLE = Linker.nativeLinker().downcallHandle(ADDR, DESC);
-    }
-
-    /**
-     * Function descriptor for:
-     * {@snippet lang=c :
-     * SkData *SkICC_SkWriteICCProfile(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22)
-     * }
-     */
-    public static FunctionDescriptor SkICC_SkWriteICCProfile$descriptor() {
-        return SkICC_SkWriteICCProfile.DESC;
-    }
-
-    /**
-     * Downcall method handle for:
-     * {@snippet lang=c :
-     * SkData *SkICC_SkWriteICCProfile(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22)
-     * }
-     */
-    public static MethodHandle SkICC_SkWriteICCProfile$handle() {
-        return SkICC_SkWriteICCProfile.HANDLE;
-    }
-
-    /**
-     * Address for:
-     * {@snippet lang=c :
-     * SkData *SkICC_SkWriteICCProfile(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22)
-     * }
-     */
-    public static MemorySegment SkICC_SkWriteICCProfile$address() {
-        return SkICC_SkWriteICCProfile.ADDR;
-    }
-
-    /**
-     * {@snippet lang=c :
-     * SkData *SkICC_SkWriteICCProfile(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22)
-     * }
-     */
-    public static MemorySegment SkICC_SkWriteICCProfile(float g, float a, float b, float c, float d, float e, float f, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22) {
-        var mh$ = SkICC_SkWriteICCProfile.HANDLE;
-        try {
-            if (TRACE_DOWNCALLS) {
-                traceDowncall("SkICC_SkWriteICCProfile", g, a, b, c, d, e, f, m00, m01, m02, m10, m11, m12, m20, m21, m22);
-            }
-            return (MemorySegment)mh$.invokeExact(g, a, b, c, d, e, f, m00, m01, m02, m10, m11, m12, m20, m21, m22);
-        } catch (Error | RuntimeException ex) {
-           throw ex;
-        } catch (Throwable ex$) {
-           throw new AssertionError("should not reach here", ex$);
-        }
-    }
-
     private static class SkSVGDOM_Make {
         public static final FunctionDescriptor DESC = FunctionDescriptor.of(
             skiacapi_h.C_POINTER,
             skiacapi_h.C_POINTER,
             skiacapi_h.C_LONG_LONG,
+            skiacapi_h.C_POINTER,
             skiacapi_h.C_POINTER
         );
 
@@ -4112,7 +4038,7 @@ public class skiacapi_h extends skiacapi_h$shared {
     /**
      * Function descriptor for:
      * {@snippet lang=c :
-     * SkSVGDOM *SkSVGDOM_Make(char *str, long long len, loadImage_t loadImage)
+     * SkSVGDOM *SkSVGDOM_Make(char *str, long long len, loadImage_t loadImage, freeImage_t freeImage)
      * }
      */
     public static FunctionDescriptor SkSVGDOM_Make$descriptor() {
@@ -4122,7 +4048,7 @@ public class skiacapi_h extends skiacapi_h$shared {
     /**
      * Downcall method handle for:
      * {@snippet lang=c :
-     * SkSVGDOM *SkSVGDOM_Make(char *str, long long len, loadImage_t loadImage)
+     * SkSVGDOM *SkSVGDOM_Make(char *str, long long len, loadImage_t loadImage, freeImage_t freeImage)
      * }
      */
     public static MethodHandle SkSVGDOM_Make$handle() {
@@ -4132,7 +4058,7 @@ public class skiacapi_h extends skiacapi_h$shared {
     /**
      * Address for:
      * {@snippet lang=c :
-     * SkSVGDOM *SkSVGDOM_Make(char *str, long long len, loadImage_t loadImage)
+     * SkSVGDOM *SkSVGDOM_Make(char *str, long long len, loadImage_t loadImage, freeImage_t freeImage)
      * }
      */
     public static MemorySegment SkSVGDOM_Make$address() {
@@ -4141,16 +4067,16 @@ public class skiacapi_h extends skiacapi_h$shared {
 
     /**
      * {@snippet lang=c :
-     * SkSVGDOM *SkSVGDOM_Make(char *str, long long len, loadImage_t loadImage)
+     * SkSVGDOM *SkSVGDOM_Make(char *str, long long len, loadImage_t loadImage, freeImage_t freeImage)
      * }
      */
-    public static MemorySegment SkSVGDOM_Make(MemorySegment str, long len, MemorySegment loadImage) {
+    public static MemorySegment SkSVGDOM_Make(MemorySegment str, long len, MemorySegment loadImage, MemorySegment freeImage) {
         var mh$ = SkSVGDOM_Make.HANDLE;
         try {
             if (TRACE_DOWNCALLS) {
-                traceDowncall("SkSVGDOM_Make", str, len, loadImage);
+                traceDowncall("SkSVGDOM_Make", str, len, loadImage, freeImage);
             }
-            return (MemorySegment)mh$.invokeExact(str, len, loadImage);
+            return (MemorySegment)mh$.invokeExact(str, len, loadImage, freeImage);
         } catch (Error | RuntimeException ex) {
            throw ex;
         } catch (Throwable ex$) {

@@ -14,12 +14,12 @@ import static java.lang.foreign.MemoryLayout.PathElement.*;
 
 /**
  * {@snippet lang=c :
- * typedef _Bool (*loadImage_t)(const char *, void **, int *, int *, unsigned char *, unsigned char *, SkColorSpace **, void **, long long *)
+ * typedef void (*freeImage_t)(const void *, void *)
  * }
  */
-public final class loadImage_t {
+public final class freeImage_t {
 
-    private loadImage_t() {
+    private freeImage_t() {
         // Should not be called directly
     }
 
@@ -27,18 +27,10 @@ public final class loadImage_t {
      * The function pointer signature, expressed as a functional interface
      */
     public interface Function {
-        boolean apply(MemorySegment name, MemorySegment freeCtx, MemorySegment w, MemorySegment h, MemorySegment colorType, MemorySegment alphaType, MemorySegment colorSpace, MemorySegment pixels, MemorySegment rowBytes);
+        void apply(MemorySegment pixels, MemorySegment freeCtx);
     }
 
-    private static final FunctionDescriptor $DESC = FunctionDescriptor.of(
-        skiacapi_h.C_BOOL,
-        skiacapi_h.C_POINTER,
-        skiacapi_h.C_POINTER,
-        skiacapi_h.C_POINTER,
-        skiacapi_h.C_POINTER,
-        skiacapi_h.C_POINTER,
-        skiacapi_h.C_POINTER,
-        skiacapi_h.C_POINTER,
+    private static final FunctionDescriptor $DESC = FunctionDescriptor.ofVoid(
         skiacapi_h.C_POINTER,
         skiacapi_h.C_POINTER
     );
@@ -50,13 +42,13 @@ public final class loadImage_t {
         return $DESC;
     }
 
-    private static final MethodHandle UP$MH = skiacapi_h.upcallHandle(loadImage_t.Function.class, "apply", $DESC);
+    private static final MethodHandle UP$MH = skiacapi_h.upcallHandle(freeImage_t.Function.class, "apply", $DESC);
 
     /**
      * Allocates a new upcall stub, whose implementation is defined by {@code fi}.
      * The lifetime of the returned segment is managed by {@code arena}
      */
-    public static MemorySegment allocate(loadImage_t.Function fi, Arena arena) {
+    public static MemorySegment allocate(freeImage_t.Function fi, Arena arena) {
         return Linker.nativeLinker().upcallStub(UP$MH.bindTo(fi), $DESC, arena);
     }
 
@@ -65,9 +57,9 @@ public final class loadImage_t {
     /**
      * Invoke the upcall stub {@code funcPtr}, with given parameters
      */
-    public static boolean invoke(MemorySegment funcPtr, MemorySegment name, MemorySegment freeCtx, MemorySegment w, MemorySegment h, MemorySegment colorType, MemorySegment alphaType, MemorySegment colorSpace, MemorySegment pixels, MemorySegment rowBytes) {
+    public static void invoke(MemorySegment funcPtr, MemorySegment pixels, MemorySegment freeCtx) {
         try {
-            return (boolean) DOWN$MH.invokeExact(funcPtr, name, freeCtx, w, h, colorType, alphaType, colorSpace, pixels, rowBytes);
+             DOWN$MH.invokeExact(funcPtr, pixels, freeCtx);
         } catch (Error | RuntimeException ex) {
             throw ex;
         } catch (Throwable ex$) {

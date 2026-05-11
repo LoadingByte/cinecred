@@ -4,6 +4,7 @@ import com.github.ooxi.jdatauri.DataUri
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.pdf.PDFDrawer
 import com.loadingbyte.cinecred.natives.skiacapi.Path
+import com.loadingbyte.cinecred.natives.skiacapi.freeImage_t
 import com.loadingbyte.cinecred.natives.skiacapi.loadImage_t
 import com.loadingbyte.cinecred.natives.skiacapi.skiacapi_h.*
 import org.apache.pdfbox.pdmodel.PDDocument
@@ -24,6 +25,7 @@ import java.lang.foreign.ValueLayout.*
 import java.lang.ref.SoftReference
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.round
@@ -1050,7 +1052,10 @@ class Canvas private constructor(
             Arena.ofConfined().use { arena ->
                 setNativeNumericLocaleToC()
                 val cStr = arena.allocateFrom(xml)
-                handle = SkSVGDOM_Make(cStr, cStr.byteSize() - 1, LoadImageFromDataURI.UPCALL_STUB)
+                handle = SkSVGDOM_Make(
+                    cStr, cStr.byteSize() - 1,
+                    LoadImageFromDataURI.LOAD_UPCALL_STUB, LoadImageFromDataURI.FREE_UPCALL_STUB
+                )
                     .also { require(it != NULL) { "Failed to allocate Skia SVGDOM." } }
                     .reinterpret(handleArena, ::SkRefCnt_unref)
 
@@ -1087,19 +1092,29 @@ class Canvas private constructor(
 
         // We supply our own image-from-data-URI loader to widen the supported formats beyond whichever codecs happen to
         // have been compiled into Skia.
-        private class LoadImageFromDataURI : loadImage_t.Function {
+        private class LoadImageFromDataURI : loadImage_t.Function, freeImage_t.Function {
 
             companion object {
-                val UPCALL_STUB: MemorySegment = loadImage_t.allocate(LoadImageFromDataURI(), Arena.global())
+
+                val LOAD_UPCALL_STUB: MemorySegment
+                val FREE_UPCALL_STUB: MemorySegment
+
+                init {
+                    val obj = LoadImageFromDataURI()
+                    LOAD_UPCALL_STUB = loadImage_t.allocate(obj, Arena.global())
+                    FREE_UPCALL_STUB = freeImage_t.allocate(obj, Arena.global())
+                }
+
             }
 
-            private val timer = Timer("SVGEmbeddedImageRetainer", true)
             private val cache = ConcurrentHashMap<String, Optional<SoftReference<PreparedBitmap>>>()
+            private val freeBitmaps = ConcurrentHashMap<Long, Bitmap>()
+            private var freeCtr = AtomicLong()
 
+            // Load
             override fun apply(
-                path: MemorySegment,
                 name: MemorySegment,
-                id: MemorySegment,
+                freeCtx: MemorySegment,
                 w: MemorySegment,
                 h: MemorySegment,
                 colorType: MemorySegment,
@@ -1110,9 +1125,11 @@ class Canvas private constructor(
             ): Boolean {
                 try {
                     val prepared = read(name.getString(0L)) ?: return false
-                    val bitmap = prepared.bitmap ?: return false
+                    val bitmap = (prepared.bitmap ?: return false).view()  // Create a view so we can free it later.
                     val (res, rep) = bitmap.spec
                     val (ct, at) = colorAndAlphaTypeFor(rep.pixelFormat, rep.alpha, prepared.promiseOpaque)
+                    val freeKey = freeCtr.incrementAndGet()
+                    freeCtx.set(ADDRESS, 0L, MemorySegment.ofAddress(freeKey))
                     w.set(JAVA_INT, 0L, res.widthPx)
                     h.set(JAVA_INT, 0L, res.heightPx)
                     colorType.set(JAVA_BYTE, 0L, ct)
@@ -1120,9 +1137,7 @@ class Canvas private constructor(
                     colorSpace.set(ADDRESS, 0L, rep.colorSpace!!.skiaHandle)
                     pixels.set(ADDRESS, 0L, bitmap.memorySegment(0))
                     rowBytes.set(JAVA_LONG, 0L, bitmap.linesize(0).toLong())
-                    // Schedule a task that prevents rasterPic from being garbage-collected long enough for Skia's SVG
-                    // renderer to draw the image.
-                    timer.schedule(Retainer(bitmap), 20_000L)
+                    freeBitmaps[freeKey] = bitmap
                     return true
                 } catch (t: Throwable) {
                     // We have to catch all exceptions because if one escapes, a segfault happens.
@@ -1148,8 +1163,9 @@ class Canvas private constructor(
                 }
             }
 
-            private class Retainer(private val bitmap: Bitmap) : TimerTask() {
-                override fun run() {}
+            // Free
+            override fun apply(pixels: MemorySegment, freeCtx: MemorySegment) {
+                freeBitmaps.remove(freeCtx.address())?.close()
             }
 
         }

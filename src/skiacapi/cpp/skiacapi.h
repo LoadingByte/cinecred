@@ -117,13 +117,13 @@ CAPI void SkDynamicMemoryWStream_delete(SkDynamicMemoryWStream* stream);
 CAPI SkData* SkDynamicMemoryWStream_detachAsData(SkDynamicMemoryWStream* stream);
 
 CAPI SkColorSpace* SkColorSpace_MakeRGB(TRC_PARAMETERS, MATRIX33_PARAMETERS);
-CAPI SkData* SkICC_SkWriteICCProfile(TRC_PARAMETERS, MATRIX33_PARAMETERS);
 
 // svg.cpp
 
-typedef bool (*loadImage_t)(const char path[], const char name[], const char id[], int* w, int* h, unsigned char* colorType, unsigned char* alphaType, SkColorSpace** colorSpace, void** pixels, long long* rowBytes);
+typedef bool (*loadImage_t)(const char name[], void** freeCtx, int* w, int* h, unsigned char* colorType, unsigned char* alphaType, SkColorSpace** colorSpace, void** pixels, long long* rowBytes);
+typedef void (*freeImage_t)(const void* pixels, void* freeCtx);
 
-CAPI SkSVGDOM* SkSVGDOM_Make(char* str, long long len, loadImage_t loadImage);
+CAPI SkSVGDOM* SkSVGDOM_Make(char* str, long long len, loadImage_t loadImage, freeImage_t freeImage);
 CAPI void SkSVGDOM_containerSize(SkSVGDOM* dom, float wh[2]);
 CAPI void SkSVGDOM_setContainerSize(SkSVGDOM* dom, float w, float h);
 CAPI bool SkSVGDOM_getViewBox(SkSVGDOM* dom, float box[4]);

@@ -319,6 +319,7 @@ class DeferredVideo private constructor(
         init {
             require(video.resolution == userSpec.resolution)
             require(userSpec.content.let { it != Bitmap.Content.ONLY_TOP_FIELD && it != Bitmap.Content.ONLY_BOT_FIELD })
+            require(userSpec.scan == Bitmap.Scan.PROGRESSIVE || userSpec.resolution.heightPx % 2 == 0)
         }
 
         private val numFrames = video.numFrames

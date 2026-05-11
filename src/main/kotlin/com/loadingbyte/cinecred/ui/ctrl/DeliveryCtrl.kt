@@ -208,6 +208,9 @@ class DeliveryCtrl(private val projectCtrl: ProjectController) : DeliveryCtrlCom
         // Reassure the user that scaling means natively rendering in the new resolution.
         if (format.isRaster && spatialScaling != 1.0)
             info(l10n("ui.delivery.issues.nativeScaling", specs.optResolution!!))
+        // Check for odd height of interlaced export.
+        if (scan != Scan.PROGRESSIVE && scaledHeight % 2 != 0)
+            error(l10n("ui.delivery.issues.interlacedHeightMod2"))
         // Check for violated restrictions of the currently selected format.
         val forLabel = format.label
         if (SPATIAL_SCALING_LOG2 in config) {

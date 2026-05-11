@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.delivery
 import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.LOGGER
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
+import com.loadingbyte.cinecred.common.userNotification
 import com.loadingbyte.cinecred.delivery.RenderFormat.CineFormProfile.*
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.choice
@@ -150,7 +151,7 @@ class VideoContainerRenderJob private constructor(
         // and submitting them to the VideoWriter. While this doesn't give us a huge performance boost over doing
         // everything sequentially in the same thread, we gain a bit when a slow encoder (like ProRes) meets an
         // expensive-to-materialize portion of the credits (like a blend).
-        val queue = LinkedBlockingQueue<Bitmap>(32)
+        val queue = LinkedBlockingQueue<Any>(32)
         val materializer = Thread({
             try {
                 DeferredVideo.BitmapBackend(
@@ -177,6 +178,8 @@ class VideoContainerRenderJob private constructor(
                 }
             } catch (_: InterruptedException) {
                 // Return
+            } catch (e: Exception) {
+                queue.put(e)
             }
         }, "VideoFrameMaterializer")
         VideoWriter(
@@ -188,7 +191,10 @@ class VideoContainerRenderJob private constructor(
                 // when the VideoWriter creation fails and we have to fall back to other VideoWriterSettings.
                 materializer.start()
                 for (frameIdx in 0..<scaledVideo.numFrames) {
-                    queue.take().use(videoWriter::write)
+                    when (val got = queue.take()) {
+                        is Bitmap -> videoWriter.write(got)
+                        else -> throw RuntimeException((got as Throwable).userNotification, got)
+                    }
                     progressCallback(MAX_RENDER_PROGRESS * (frameIdx + 1) / scaledVideo.numFrames)
                     if (Thread.interrupted())
                         throw InterruptedException()
@@ -196,7 +202,7 @@ class VideoContainerRenderJob private constructor(
             } finally {
                 materializer.interrupt()
                 materializer.join(1000L)
-                while (queue.poll()?.also(Bitmap::close) != null) continue
+                while ((queue.poll() as? Bitmap)?.also(Bitmap::close) != null) continue
             }
         }
 

@@ -3,6 +3,7 @@ package com.loadingbyte.cinecred.delivery
 import com.loadingbyte.cinecred.common.cleanDirectory
 import com.loadingbyte.cinecred.common.createDirectoriesSafely
 import com.loadingbyte.cinecred.common.throwableAwareTask
+import com.loadingbyte.cinecred.common.userNotification
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.choice
 import com.loadingbyte.cinecred.delivery.RenderFormat.Config.Assortment.Companion.fixed
@@ -35,6 +36,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.exists
 import kotlin.math.pow
 
@@ -129,6 +131,7 @@ class ImageSequenceRenderJob private constructor(
             try {
                 val done = CountDownLatch(numFrames)
                 val backlog = Semaphore(numWorkers * 5)
+                val writerExc = AtomicReference<Exception?>()
                 for (frameIdx in 0..<numFrames) {
                     val colorBitmap = backend.materializeFrame(frameIdx)!!
                     val bitmap = if (!matte) colorBitmap else colorBitmap.use(Bitmap::alphaPlaneView)
@@ -136,20 +139,24 @@ class ImageSequenceRenderJob private constructor(
                     backlog.acquire()
                     executor.submit(throwableAwareTask {
                         try {
-                            bitmapWriter.write(bitmap, file)
-                            bitmap.close()
-                            backlog.release()
-                            done.countDown()
+                            bitmap.use { bitmapWriter.write(bitmap, file) }
                             if (!Thread.interrupted())
                                 progressCallback(MAX_RENDER_PROGRESS * (numFrames - done.count.toInt()) / numFrames)
                         } catch (_: InterruptedException) {
                             // Return.
+                        } catch (e: Exception) {
+                            writerExc.set(e)
+                        } finally {
+                            backlog.release()
+                            done.countDown()
                         }
                     })
+                    writerExc.get()?.let { e -> throw RuntimeException(e.userNotification, e) }
                     if (Thread.interrupted())
                         throw InterruptedException()
                 }
                 done.await()
+                writerExc.get()?.let { e -> throw RuntimeException(e.userNotification, e) }
             } finally {
                 executor.shutdownNow()
                 executor.awaitTermination(1, TimeUnit.SECONDS)

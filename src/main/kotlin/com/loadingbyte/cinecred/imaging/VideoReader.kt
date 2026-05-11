@@ -233,6 +233,10 @@ class VideoReader(
                 val tb = st!!.time_base()
                 Timecode.Clock(frame.pts() * tb.num(), tb.den().toLong())
             }
+            if (frame.width() != spec.resolution.widthPx || frame.height() != spec.resolution.heightPx ||
+                frame.format().let { it != spec.representation.pixelFormat.code && it != AV_PIX_FMT_PAL8 }
+            )
+                throw FFmpegException("Frame $timecode has a size or pixel format that differs from other frames.")
             val bitmap: Bitmap
             if (frame.format() == AV_PIX_FMT_PAL8) {
                 bitmap = Bitmap.allocate(spec)

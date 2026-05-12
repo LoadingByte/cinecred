@@ -1,5 +1,6 @@
 package com.loadingbyte.cinecred.imaging
 
+import com.loadingbyte.cinecred.common.DisposableReference
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.natives.skcms.skcms_h.*
 import com.loadingbyte.cinecred.natives.skiacapi.skiacapi_h.*
@@ -7,7 +8,6 @@ import org.bytedeco.ffmpeg.global.avutil.*
 import java.lang.foreign.Arena
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout.JAVA_FLOAT
-import java.lang.ref.SoftReference
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 import kotlin.math.pow
@@ -22,7 +22,8 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
         SkColorSpace_MakeRGB(c.g, c.a, c.b, c.c, c.d, c.e, c.f, m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8])
     }
 
-    private val bmpConvCache = ConcurrentHashMap<ColorSpace, SoftReference<Triple<Bitmap, Bitmap, BitmapConverter>>>()
+    private val bmpConvCache =
+        ConcurrentHashMap<ColorSpace, DisposableReference<Triple<Bitmap, Bitmap, BitmapConverter>>>()
 
     fun convert(dst: ColorSpace, colors: FloatArray, alpha: Boolean, clamp: Boolean = false, ceiling: Float? = 1f) {
         if (this != dst)
@@ -39,7 +40,8 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
                 var srcBitmap: Bitmap? = null
                 var dstBitmap: Bitmap? = null
                 var converter: BitmapConverter? = null
-                val cached = bmpConvCache.remove(dst)?.get()
+                val cachedRef = bmpConvCache.remove(dst)
+                val cached = cachedRef?.get()
                 if (cached != null) {
                     srcBitmap = cached.first
                     dstBitmap = cached.second
@@ -59,7 +61,12 @@ class ColorSpace private constructor(val primaries: Primaries, val transfer: Tra
                 srcBitmap.put(colors, colors.size)
                 converter.convert(srcBitmap, dstBitmap)
                 dstBitmap.get(colors, colors.size)
-                bmpConvCache[dst] = SoftReference(Triple(srcBitmap, dstBitmap, converter))
+                bmpConvCache.put(
+                    dst,
+                    // As the BitmapConverter is usually just a SKCMS stage, we can ignore its size.
+                    if (cached != null) cachedRef else
+                        DisposableReference(Triple(srcBitmap, dstBitmap, converter), srcBitmap.bytes + dstBitmap.bytes)
+                )?.getAndClose()?.run { first.close(); second.close(); third.close() }
             }
         if (clamp)
             for (i in colors.indices)

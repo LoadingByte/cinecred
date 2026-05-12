@@ -107,6 +107,10 @@ class Bitmap private constructor(
             throw IllegalArgumentException("Bitmap only has ${linesizes.size} planes, so $plane is out of bounds.")
         }
 
+    /** Returns the total number of bytes occupied by the picture data, excluding the [AVFrame]. */
+    val bytes: Long
+        get() = planeSegments.sumOf(MemorySegment::byteSize)
+
     /**
      * Returns whether each plane of the bitmap starts at a [BYTE_ALIGNMENT]-aligned position and has a linesize that is
      * a multiple of [BYTE_ALIGNMENT].

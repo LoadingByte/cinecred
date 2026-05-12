@@ -6,7 +6,6 @@ import com.loadingbyte.cinecred.imaging.Y.Companion.toY
 import org.bytedeco.ffmpeg.global.avutil.*
 import java.awt.Point
 import java.awt.Rectangle
-import java.lang.ref.SoftReference
 import java.nio.ByteOrder
 import java.util.*
 import java.util.concurrent.Semaphore
@@ -424,7 +423,7 @@ class DeferredVideo private constructor(
             ) {
                 override fun createRenders(
                     image: DeferredImage, baseShift: Int, microShifts: DoubleArray, height: Int
-                ): List<Render> {
+                ): SizedValue<List<Render>> {
                     // IMPORTANT: This method will be called from different threads at the same time when stuff is
                     // pre-rendered in the background. As such, we can't use any BitmapConverters or other stateful
                     // objects in this method!
@@ -456,10 +455,10 @@ class DeferredVideo private constructor(
                         renderCanvas2draft = BitmapConverter(renderCanvasSpec, renderDraftSpec, approxTransfer = true)
                     }
 
-                    try {
+                    val renders = try {
                         // Note: Despite this map operation potentially being expensive if there are lots of bitmaps,
                         // we cannot parallelize it because BitmapConverter.convert() is not thread-safe.
-                        return transparentCanvasBitmaps.map { transparentCanvasBitmap ->
+                        transparentCanvasBitmaps.map { transparentCanvasBitmap ->
                             // Obtain the user bitmap.
                             val userBitmap = Bitmap.allocate(renderUserSpec)
                             if (grounding == null)
@@ -489,6 +488,9 @@ class DeferredVideo private constructor(
                         renderCanvas2user.close()
                         renderCanvas2draft?.close()
                     }
+
+                    val bytes = renders.sumOf { it.transparCanvasOrDraftBitmap.bytes + it.userBitmap.bytes }
+                    return SizedValue(renders, bytes)
                 }
             }
         }
@@ -1356,11 +1358,11 @@ class DeferredVideo private constructor(
 
         protected abstract fun createRenders(
             image: DeferredImage, baseShift: Int, microShifts: DoubleArray, height: Int
-        ): List<R>
+        ): SizedValue<List<R>>
 
         fun close() {
             for (chunk in chunks)
-                chunk.microShiftedRenders.getAndSet(null)?.get()?.forEach { it.close() }
+                chunk.microShiftedRenders.getAndSet(null)?.getAndClose()?.forEach { it.close() }
         }
 
         fun query(frameIdx: Int): List<Response<R>> = buildList {
@@ -1392,7 +1394,7 @@ class DeferredVideo private constructor(
                 for (i in chunkIdx - 1 downTo 0) {
                     val renders = chunks[i].microShiftedRenders.getAndSet(null)
                     // Stop when we encounter a chunk that was once loaded but has since been explicitly nulled before.
-                    if (renders != null) renders.get()?.forEach { it.close() } else break
+                    if (renders != null) renders.getAndClose()?.forEach { it.close() } else break
                 }
 
             // In preloading mode, queue preloading of the surrounding chunks in a background thread.
@@ -1428,20 +1430,20 @@ class DeferredVideo private constructor(
                 return
             // If the chunk has already been rendered previously, immediately release the rendering right.
             // Otherwise, start rendering in another thread.
-            if (chunk.microShiftedRenders.get().let { it != null && !it.refersTo(null) })
+            if (chunk.microShiftedRenders.get().let { it?.get() != null })
                 chunk.semaphore.release()
             else
                 GLOBAL_THREAD_POOL.submit(throwableAwareTask { loadChunk(chunk) })
         }
 
         // Apart from code design, there is an important reason for why this method returns the renders: to ensure that
-        // there is a strong reference to them. Otherwise, the garbage collector could discard them immediately when the
+        // there is a strong reference to them. Otherwise, the DisposableReference could drop them immediately when the
         // method returns.
         private fun loadChunk(chunk: Chunk<R>): List<R> {
             try {
-                val microShiftedRenders = createRenders(chunk.image, chunk.shift, chunk.microShifts, chunk.height)
-                chunk.microShiftedRenders.set(SoftReference(microShiftedRenders))
-                return microShiftedRenders
+                val sizedValue = createRenders(chunk.image, chunk.shift, chunk.microShifts, chunk.height)
+                chunk.microShiftedRenders.set(DisposableReference(sizedValue))
+                return sizedValue.value
             } finally {
                 chunk.semaphore.release()
             }
@@ -1469,7 +1471,7 @@ class DeferredVideo private constructor(
             val image: DeferredImage,
             val microShifts: DoubleArray
         ) {
-            val microShiftedRenders = AtomicReference<SoftReference<List<R>>?>()
+            val microShiftedRenders = AtomicReference<DisposableReference<List<R>>?>()
             val semaphore = Semaphore(1)
         }
 

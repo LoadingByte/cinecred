@@ -17,7 +17,6 @@ import java.nio.channels.FileChannel
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 import kotlin.io.path.isRegularFile
@@ -179,20 +178,13 @@ class Font private constructor(private val hbFace: MemorySegment) {
         return if (newHbFace == NULL) null else Font(newHbFace)
     }
 
-    fun case(size: Double = 12.0, variations: Set<Variation> = emptySet()): Case {
-        // The idea is to cache cases for a short duration, to make it extremely cheap to create them, and also keep
-        // their internal glyph cache alive for a reasonable time. We don't need to cache them for a long time, since
-        // they are still relatively cheap to construct.
-        // By using weak references, we make sure that most cases don't make it to the old generation. And because cases
-        // are so cheap to construct, we can just blindly clear the entire cache when it becomes too full.
-        if (caseCache.size > 1000)
-            caseCache.clear()
-        val key = CaseKey(this, size, variations)
-        caseCache[key]?.get()?.let { return it }
-        val case = Case(this, size, variations, 0)
-        caseCache[key] = WeakReference(case)
-        return case
-    }
+    fun case(size: Double = 12.0, variations: Set<Variation> = emptySet()): Case =
+        // We cache cases to make it extremely cheap to obtain them, and also keep their internal glyph cache alive.
+        caseCache.get(CaseKey(this, size, variations)) {
+            // Just assume that each case occupies 2KB of RAM. That's quite a low estimate, but most cases never build
+            // up costly structures like a large glyph cache.
+            SizedValue(Case(this, size, variations, 0), 2048)
+        }
 
 
     companion object {
@@ -304,7 +296,7 @@ class Font private constructor(private val hbFace: MemorySegment) {
         val MANAGED_FEATURES = LIGATURES_FEATURES +
                 setOf(KERNING_FEATURE, SMALL_CAPS_FEATURE, PETITE_CAPS_FEATURE, CAPITAL_SPACING_FEATURE)
 
-        private val caseCache = ConcurrentHashMap<CaseKey, WeakReference<Case>>()
+        private val caseCache = DisposableCache<CaseKey, Case>()
 
         private fun isValidTag(tag: String): Boolean =
             tag.length == 4 && tag.all { it.code in 0..255 }

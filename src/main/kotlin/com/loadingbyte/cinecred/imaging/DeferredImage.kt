@@ -39,7 +39,6 @@ import java.io.OutputStream
 import java.lang.Byte.toUnsignedInt
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout.JAVA_BYTE
-import java.lang.ref.SoftReference
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.*
@@ -545,12 +544,14 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
     }
 
     private class CanvasMaterializationCacheImpl : CanvasMaterializationCache {
-        private val prepPics = Collections.synchronizedMap(WeakHashMap<Picture, SoftReference<Canvas.PreparedBitmap>>())
+        private val prepPics =
+            Collections.synchronizedMap(WeakHashMap<Picture, DisposableReference<Canvas.PreparedBitmap>>())
         // It is vital that this method removes the prepared bitmap and doesn't just retrieve it, because if thread A
         // has it while thread B replaces it with put...(), the bitmap could be closed while thread A is still using it.
-        fun popPreparedPicture(picture: Picture): Canvas.PreparedBitmap? = prepPics.remove(picture)?.get()
+        fun popPreparedPicture(picture: Picture): Canvas.PreparedBitmap? = prepPics.remove(picture)?.getAndClose()
         fun putPreparedPicture(picture: Picture, prepared: Canvas.PreparedBitmap) {
-            prepPics.put(picture, SoftReference(prepared))?.get()?.bitmap?.close()
+            prepPics.put(picture, DisposableReference(prepared, prepared.bitmap?.bytes ?: 0))
+                ?.getAndClose()?.bitmap?.close()
         }
     }
 

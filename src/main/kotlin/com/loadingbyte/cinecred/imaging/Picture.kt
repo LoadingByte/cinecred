@@ -74,6 +74,8 @@ sealed interface Picture : AutoCloseable {
         val bitmap: Bitmap
     ) : Picture {
 
+        private val nonBlankBoundaryPointsCache = DisposableCache<Rectangle, DoubleArray>()
+
         init {
             val pixFmtCode = bitmap.spec.representation.pixelFormat.code
             require(pixFmtCode == AV_PIX_FMT_GBRPF32 || pixFmtCode == AV_PIX_FMT_GBRAPF32)
@@ -103,12 +105,8 @@ sealed interface Picture : AutoCloseable {
             } catch (_: IllegalStateException) {
                 // If the bitmap is used right now, let the GC collect and close it later.
             }
+            nonBlankBoundaryPointsCache.close()
         }
-
-        private val nonBlankBoundaryPointsCache =
-            Collections.synchronizedMap(object : LinkedHashMap<Rectangle, DoubleArray>(64, 0.75f, true) {
-                override fun removeEldestEntry(eldest: Map.Entry<Rectangle, DoubleArray>) = size > 64
-            })
 
         override fun nonBlankBounds(crop: Rectangle2D?, transform: AffineTransform?): Rectangle2D? {
             val crop = (crop as? Rectangle)
@@ -118,7 +116,10 @@ sealed interface Picture : AutoCloseable {
             if (!bitmap.spec.representation.pixelFormat.hasAlpha)
                 return Rectangle(crop.width, crop.height).transformedBy(transform).bounds
 
-            val boundaryPoints = nonBlankBoundaryPointsCache.computeIfAbsent(crop) { findBoundaryPoints(bitmap, crop) }
+            val boundaryPoints = nonBlankBoundaryPointsCache.get(crop) {
+                val array = findBoundaryPoints(bitmap, crop)
+                SizedValue(array, array.size * 8L)
+            }
             return findNonBlankBounds(boundaryPoints, transform)
         }
 
@@ -157,8 +158,10 @@ sealed interface Picture : AutoCloseable {
     sealed class Vector : Picture {
 
         @Volatile private var roughNonBlankBounds: Optional<Rectangle2D>? = null
-        private val nonBlankBoundaryPointsCache = object : LinkedHashMap<Rectangle2D, DoubleArray>(64, 0.75f, true) {
-            override fun removeEldestEntry(eldest: Map.Entry<Rectangle2D, DoubleArray>) = size > 64
+        private val nonBlankBoundaryPointsCache = DisposableCache<Rectangle2D, DoubleArray>()
+
+        override fun close() {
+            nonBlankBoundaryPointsCache.close()
         }
 
         override fun nonBlankBounds(crop: Rectangle2D?, transform: AffineTransform?): Rectangle2D? {
@@ -177,8 +180,9 @@ sealed interface Picture : AutoCloseable {
 
             // Note: This cache exactly matches float-based rectangles, but float inaccuracy is not a problem since the
             // crop directly stems from user configuration without any intermediate computational steps.
-            val boundaryPoints = nonBlankBoundaryPointsCache.computeIfAbsent(crop) {
-                render(renderScaling, renderCrop)?.use(::findBoundaryPoints) ?: DoubleArray(0)
+            val boundaryPoints = nonBlankBoundaryPointsCache.get(crop) {
+                val array = render(renderScaling, renderCrop)?.use(::findBoundaryPoints) ?: DoubleArray(0)
+                SizedValue(array, array.size * 8L)
             }
             return findNonBlankBounds(boundaryPoints, (transform?.let(::AffineTransform) ?: AffineTransform()).apply {
                 translate(renderCrop.x - crop.x, renderCrop.y - crop.y)
@@ -226,6 +230,7 @@ sealed interface Picture : AutoCloseable {
             lock.withLock { importer.importNode(doc.documentElement, true) as Element }
 
         override fun close() {
+            super.close()
             lock.withLock(src::close)
         }
 
@@ -428,6 +433,7 @@ sealed interface Picture : AutoCloseable {
         }
 
         override fun close() {
+            super.close()
             try {
                 lock.withLock(doc::close)
             } catch (e: IOException) {

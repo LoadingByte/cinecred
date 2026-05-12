@@ -22,10 +22,10 @@ import java.lang.foreign.Arena
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.MemorySegment.NULL
 import java.lang.foreign.ValueLayout.*
-import java.lang.ref.SoftReference
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.jvm.optionals.getOrNull
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.round
@@ -1107,7 +1107,7 @@ class Canvas private constructor(
 
             }
 
-            private val cache = ConcurrentHashMap<String, Optional<SoftReference<PreparedBitmap>>>()
+            private val cache = DisposableCache<String, Optional<PreparedBitmap>>()
             private val freeBitmaps = ConcurrentHashMap<Long, Bitmap>()
             private var freeCtr = AtomicLong()
 
@@ -1146,22 +1146,19 @@ class Canvas private constructor(
                 }
             }
 
-            private fun read(uri: String): PreparedBitmap? {
-                cache[uri]?.let { opt -> if (opt.isEmpty) return null else opt.get().get()?.let { return it } }
+            private fun read(uri: String): PreparedBitmap? = cache.get(uri) {
                 try {
                     // Note: We intentionally ignore the MIME type and instead let BitmapReader figure out the format.
                     val bytes = DataUri.parse(uri, Charsets.UTF_8).data
                     val prepared = BitmapReader.read(bytes, planar = false).use { bitmap ->
                         prepareBitmap(bitmap, false, false, null, IDENTITY, ColorSpace.SRGB, 1f, null)
                     }
-                    cache[uri] = Optional.of(SoftReference(prepared))
-                    return prepared
+                    SizedValue(Optional.of(prepared), prepared.bitmap?.bytes ?: 0)
                 } catch (e: Exception) {
                     LOGGER.error("Skipping image embedded in SVG because it is corrupt or cannot be read.", e)
-                    cache[uri] = Optional.empty()
-                    return null
+                    SizedValue(Optional.empty(), 0)
                 }
-            }
+            }.getOrNull()
 
             // Free
             override fun apply(pixels: MemorySegment, freeCtx: MemorySegment) {

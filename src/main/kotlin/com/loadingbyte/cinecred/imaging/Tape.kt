@@ -5,11 +5,9 @@ import java.awt.Shape
 import java.awt.geom.AffineTransform
 import java.awt.geom.Path2D
 import java.io.IOException
-import java.lang.ref.SoftReference
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import javax.swing.UIManager
 import kotlin.concurrent.withLock
@@ -107,10 +105,7 @@ class Tape private constructor(
         }
     }
 
-    private val reinterpretedTapes =
-        Collections.synchronizedMap(object : LinkedHashMap<Reinterpretation, Tape>(16, 0.75f, true) {
-            override fun removeEldestEntry(eldest: Map.Entry<Reinterpretation, Tape>) = size > 4
-        })
+    private val reinterpretedTapes = DisposableCache<Reinterpretation, Tape>()
 
     /** The returned tape is "dependent" because it will be closed when this parent tape is closed. */
     fun dependentReinterpretedTape(
@@ -122,8 +117,10 @@ class Tape private constructor(
         content: Bitmap.Content
     ): Tape {
         val viewSettings = Reinterpretation(range, colorSpace, yuvCoefficients, alpha, scan, content)
-        return reinterpretedTapes.computeIfAbsent(viewSettings) {
-            Tape(fileSeq, fileOrDir, fileOrPattern, firstNumber, lastNumber, parent = this, viewSettings)
+        return reinterpretedTapes.get(viewSettings) {
+            // Using a size of 0 means that while the reinterpreted tapes don't count towards the memory cap, they are
+            // still evicted after some time if they're no longer used and there's a lot of churn.
+            SizedValue(Tape(fileSeq, fileOrDir, fileOrPattern, firstNumber, lastNumber, parent = this, viewSettings), 0)
         }
     }
 
@@ -144,15 +141,19 @@ class Tape private constructor(
             // The tape is unreadable, so it doesn't matter what we return here.
             true
         }
+        val getItemBytesFileSeq = { o: Optional<Picture.Raster> -> o.getOrNull()?.bitmap?.bytes ?: 0 }
+        val getItemBytesContainer = { l: List<RasterPictureAndClock> -> l.sumOf { it.picture.bitmap.bytes } }
+        val closeItemFileSeq = { o: Optional<Picture.Raster> -> o.getOrNull()?.close(); Unit }
+        val closeItemContainer = { l: List<RasterPictureAndClock> -> l.forEach { e -> e.picture.close() } }
         if (reinterpretParentPreview) {
             if (fileSeq)
                 fileSeqPreviewCache = MappingPreviewCache(parent.fileSeqPreviewCache!!, mapItem = { optional ->
                     optional.map(reinterpretation::ofPreview)
-                }, closeItem = { optional -> optional.getOrNull()?.close() })
+                }, getItemBytesFileSeq, closeItemFileSeq)
             else
                 containerPreviewCache = MappingPreviewCache(parent.containerPreviewCache!!, mapItem = { list ->
                     list.map { elem -> RasterPictureAndClock(reinterpretation.ofPreview(elem.picture), elem.clock) }
-                }, closeItem = { list -> for (elem in list) elem.picture.close() })
+                }, getItemBytesContainer, closeItemContainer)
         } else if (fileSeq)
             fileSeqPreviewCache = LoadingPreviewCache(fileOrDir.name, 500, 50, createLoader = { startFrames ->
                 val reader = VideoReader(fileOrPattern, Timecode.Frames(startFrames))
@@ -163,7 +164,7 @@ class Tape private constructor(
                             ?.let { f -> toPreviewPicture(f).also { f.bitmap.close() } }
                             .let(Optional<*>::ofNullable)
                 }
-            }, closeItem = { optional -> optional.getOrNull()?.close() })
+            }, getItemBytesFileSeq, closeItemFileSeq)
         else
             containerPreviewCache = LoadingPreviewCache(fileOrDir.name, 10, 1, createLoader = { startSeconds ->
                 val reader = VideoReader(fileOrPattern, Timecode.Clock(startSeconds.toLong(), 1L))
@@ -188,7 +189,7 @@ class Tape private constructor(
                         }
                     }
                 }
-            }, closeItem = { list -> for (elem in list) elem.picture.close() })
+            }, getItemBytesContainer, closeItemContainer)
     }
 
     private class RasterPictureAndClock(val picture: Picture.Raster, val clock: Timecode.Clock)
@@ -271,7 +272,7 @@ class Tape private constructor(
 
     /** Also closes all tapes created via [dependentReinterpretedTape]. */
     override fun close() {
-        reinterpretedTapes.values.forEach(Tape::close)
+        reinterpretedTapes.getAll().forEach(Tape::close)
         fileSeqPreviewCache?.close()
         containerPreviewCache?.close()
     }
@@ -518,22 +519,23 @@ class Tape private constructor(
     private class MappingPreviewCache<I : Any>(
         private val delegate: PreviewCache<I>,
         private val mapItem: (I) -> I,
+        private val getItemBytes: (I) -> Long,
         private val closeItem: (I) -> Unit
     ) : PreviewCache<I> {
 
-        private val cache = ConcurrentHashMap<Int, I>()
+        // Note: If mapItem() just reinterprets a bitmap, then we're counting the size of the cached bitmaps twice, but
+        // the only consequence is that we might clear old cache entries earlier.
+        private val cache = DisposableCache<Int, I>()
 
-        override fun getItem(point: Int): CompletableFuture<I> {
-            cache[point]?.let { return CompletableFuture.completedFuture(it) }
-            return delegate.getItem(point).thenApply { item ->
-                cache.computeIfAbsent(point) { mapItem(item) }
+        override fun getItem(point: Int): CompletableFuture<I> =
+            cache.getAsync(point) {
+                delegate.getItem(point).thenApply { item -> mapItem(item).let { SizedValue(it, getItemBytes(it)) } }
             }
-        }
 
         override fun close() {
             delegate.close()
-            cache.values.forEach(closeItem)
-            cache.clear()
+            cache.getAllAsync().forEach { future -> future.thenApply(closeItem) }
+            cache.close()
         }
 
     }
@@ -544,6 +546,7 @@ class Tape private constructor(
         private val ahead: Int,
         private val inertia: Int,
         private val createLoader: (start: Int) -> Loader<I>,
+        private val getItemBytes: (I) -> Long,
         private val closeItem: (I) -> Unit
     ) : PreviewCache<I> {
 
@@ -578,7 +581,7 @@ class Tape private constructor(
         private fun addSlice(start: Int): CompletableFuture<I> {
             var stop = start + ahead
             slices.higher(BaseSlice(start))?.let { stop = min(stop, it.start) }
-            val slice = Slice<I>(start, stop, inertia)
+            val slice = Slice<I>(start, stop, inertia, getItemBytes, closeItem)
             val future = slice.getItemOrSplitSlice(start).future!!
             slices.add(slice)
             GLOBAL_THREAD_POOL.submit(throwableAwareTask {
@@ -601,18 +604,24 @@ class Tape private constructor(
                 slices.toMutableList().also { slices.clear() }
             }
             for (slice in slices)
-                (slice as Slice).close(closeItem)
+                (slice as Slice).close()
         }
 
         private open class BaseSlice<I>(val start: Int) : Comparable<BaseSlice<I>> {
             override fun compareTo(other: BaseSlice<I>) = start.compareTo(other.start)
         }
 
-        private class Slice<I>(start: Int, var stop: Int, private val inertia: Int) : BaseSlice<I>(start) {
+        private class Slice<I>(
+            start: Int, var
+            stop: Int,
+            private val inertia: Int,
+            private val getItemBytes: (I) -> Long,
+            private val closeItem: (I) -> Unit
+        ) : BaseSlice<I>(start), AutoCloseable {
 
             private val lock = ReentrantLock()
             private var items: MutableList<I>? = ArrayList(stop - start)
-            private var softItems: SoftReference<List<I>>? = null
+            private var disposableItems: DisposableReference<List<I>>? = null
             private var claim = start - 1
             private val pendingFutures = arrayOfNulls<MutableList<CompletableFuture<I>>?>(stop - start)
             private var closed = false
@@ -624,9 +633,9 @@ class Tape private constructor(
                 val idx = point - start
                 val items = this.items
                 if (items == null)
-                    when (val softItems = this.softItems!!.get()) {
+                    when (val disposableItems = this.disposableItems!!.get()) {
                         null -> SliceResp(SliceRespStatus.CLEARED, null)
-                        else -> SliceResp(SliceRespStatus.GOT, CompletableFuture.completedFuture(softItems[idx]))
+                        else -> SliceResp(SliceRespStatus.GOT, CompletableFuture.completedFuture(disposableItems[idx]))
                     }
                 else if (point == start /* prevent empty slices */ || point - claim <= inertia)
                     if (idx < items.size)
@@ -650,10 +659,11 @@ class Tape private constructor(
                 val futures = lock.withLock {
                     if (closed)
                         return
-                    items!!.add(item)
+                    val items = this.items!!
+                    items.add(item)
                     if (claim == stop - 1) {
-                        softItems = SoftReference(items)
-                        items = null
+                        disposableItems = DisposableReference(items, bytes = items.sumOf(getItemBytes))
+                        this.items = null
                     }
                     val idx = claim - start
                     pendingFutures[idx].also { pendingFutures[idx] = null }
@@ -661,9 +671,9 @@ class Tape private constructor(
                 futures?.forEach { it.complete(item) }
             }
 
-            fun close(closeItem: (I) -> Unit) {
+            override fun close() {
                 lock.withLock { closed = true }
-                (items ?: softItems?.get())?.forEach(closeItem)
+                (items ?: disposableItems?.getAndClose())?.forEach(closeItem)
                 for (futures in pendingFutures)
                     futures?.forEach { future -> future.completeExceptionally(ClosedException()) }
             }

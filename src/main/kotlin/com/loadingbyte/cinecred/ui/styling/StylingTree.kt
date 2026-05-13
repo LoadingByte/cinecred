@@ -2,6 +2,7 @@ package com.loadingbyte.cinecred.ui.styling
 
 import com.loadingbyte.cinecred.common.ROOT_CASE_INSENSITIVE_COLLATOR
 import com.loadingbyte.cinecred.common.caseInsensitiveCollator
+import com.loadingbyte.cinecred.common.requireIsInstance
 import com.loadingbyte.cinecred.ui.helper.FOLDER_ICON
 import com.loadingbyte.cinecred.ui.helper.ICON_ICON_GAP
 import com.loadingbyte.cinecred.ui.helper.SVGIcon
@@ -168,7 +169,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         throw IllegalArgumentException("Old element not found.")
     }
 
-    fun replaceAllListElements(newElements: Iterable<Any>) {
+    fun replaceAllListElementsKeepingAppearance(newElements: Iterable<Any>) {
         val selectedNodeUserObj = selectedNode?.userObject.let { it as? StoredObj }
 
         // If a list node is currently selected, deselect it for now. For this, the onDeselect() function is disabled
@@ -178,12 +179,22 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         if (selectedNodeUserObj?.typeInfo is TypeInfo.List)
             withoutSelectionListener { selectionRows = intArrayOf() }
 
+        val oldNodes = listTypeInfos.values.associateWith { typeInfo -> typeInfo.node.children().toList() }
+
         for (typeInfo in listTypeInfos.values)
-            for (node in typeInfo.node.children().toList())  // Using .toList() avoids concurrent modification.
+            for (node in oldNodes.getValue(typeInfo))
                 model.removeNodeFromParent(node as MutableTreeNode)
 
-        for (element in newElements)
-            addListElement(element)
+        for (element in newElements) {
+            val typeInfo = listTypeInfos.getValue(element.javaClass)
+            val leafUserObj = StoredObj(typeInfo, element)
+            similarNode(typeInfo, oldNodes.getValue(typeInfo), element)?.userObject?.let { oldLeafUserObj ->
+                oldLeafUserObj as StoredObj
+                leafUserObj.isGrayedOut = oldLeafUserObj.isGrayedOut
+                leafUserObj.extraIcons = oldLeafUserObj.extraIcons
+            }
+            insertSortedLeaf(typeInfo.node, leafUserObj)
+        }
 
         for (typeInfo in listTypeInfos.values)
             expandPath(TreePath(typeInfo.node.path))
@@ -191,14 +202,7 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
         val typeInfo = selectedNodeUserObj?.typeInfo
         if (typeInfo is TypeInfo.List) {
             // If a list node has previously been select, select the best matching node now...
-            val oldElem = selectedNodeUserObj.obj
-            val oldElemName = typeInfo.objToString(oldElem)
-            val candidateNodes = typeInfo.node.children().asSequence().map { it as DefaultMutableTreeNode }.toList()
-
-            val bestMatchingNode =
-                candidateNodes.find { (it.userObject as StoredObj).obj == oldElem }
-                    ?: candidateNodes.find { typeInfo.objToString((it.userObject as StoredObj).obj) == oldElemName }
-
+            val bestMatchingNode = similarNode(typeInfo, typeInfo.node.children().toList(), selectedNodeUserObj.obj)
             // If some matching node has been found, select it. Once again, don't notify onSelect().
             if (bestMatchingNode != null)
                 withoutSelectionListener { selectionPath = TreePath(bestMatchingNode.path) }
@@ -293,6 +297,13 @@ class StylingTree : JTree(DefaultTreeModel(DefaultMutableTreeNode(), true)) {
 
     private val selectedNode
         get() = lastSelectedPathComponent as DefaultMutableTreeNode?
+
+    private fun similarNode(typeInfo: TypeInfo.List, candidates: List<TreeNode>, obj: Any): DefaultMutableTreeNode? {
+        val objName = typeInfo.objToString(obj)
+        val candidates = candidates.requireIsInstance<DefaultMutableTreeNode>()
+        return candidates.find { (it.userObject as StoredObj).obj == obj }
+            ?: candidates.find { typeInfo.objToString((it.userObject as StoredObj).obj) == objName }
+    }
 
     private inline fun withoutSelectionListener(block: () -> Unit) {
         disableSelectionListener = true

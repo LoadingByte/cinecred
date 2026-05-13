@@ -385,7 +385,7 @@ class EditStylingPanel(private val ctrl: ProjectController) :
         this.styling = styling
 
         stylingTree.setSingleton(styling.global)
-        stylingTree.replaceAllListElements(ListedStyle.CLASSES.flatMap { styling.getListedStyles(it) })
+        stylingTree.replaceAllListElementsKeepingAppearance(ListedStyle.CLASSES.flatMap { styling.getListedStyles(it) })
         formAdjuster.onLoadStyling()
 
         // Simulate the user selecting the node which is already selected currently. This will cause the selected style

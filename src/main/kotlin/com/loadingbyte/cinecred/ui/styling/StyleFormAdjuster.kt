@@ -16,7 +16,6 @@ class StyleFormAdjuster(
     private val forms: List<StyleForm<*>>,
     private val getCurrentStyling: () -> Styling?,
     private val getCurrentStyleInActiveForm: () -> Style?,
-    private val notifyConstraintViolations: (List<ConstraintViolation>) -> Unit,
     // ========== ENCAPSULATION LEAKS ==========
     @Suppress("DEPRECATION")
     private val styleIdxAndSiblingsOverride: StyleIdxAndSiblingsOverride? = null
@@ -32,10 +31,9 @@ class StyleFormAdjuster(
 
     // Save the externally provided override context, and initialize it with a dummy one.
     private var overrideCtx = OverrideWidgetSpec.Context(0, emptyMap())
-    // Save the externally provided constraint violations.
-    private var extraConstraintViolations: List<ConstraintViolation> = emptyList()
+    // Save the externally provided constraint violations. When they're non-null, they should match the current Styling.
+    private var constraintViolations: List<ConstraintViolation>? = null
     // Cache the current Styling's constraint violations and all colors used in the current Styling.
-    private var constraintViolations: List<ConstraintViolation> = emptyList()
     private var swatchColors: List<Color4f> = emptyList()
 
     var activeForm: StyleForm<*>? = null
@@ -45,7 +43,7 @@ class StyleFormAdjuster(
         }
 
     fun onLoadStyling() {
-        refreshConstraintViolations()
+        constraintViolations = null
         refreshSwatchColors()
     }
 
@@ -54,7 +52,7 @@ class StyleFormAdjuster(
     }
 
     fun onChangeInActiveForm() {
-        refreshConstraintViolations()
+        constraintViolations = null
         refreshSwatchColors()
         adjustActiveForm()
     }
@@ -82,23 +80,17 @@ class StyleFormAdjuster(
                     form.setChoices(setting, choices)
     }
 
-    fun updateExtraConstraintViolationsAndOverrideCtx(
-        violations: List<ConstraintViolation>,
-        overrideCtx: OverrideWidgetSpec.Context
+    fun updateConstraintViolationsAndOverrideCtx(
+        violations: List<ConstraintViolation>?,
+        overrideCtx: OverrideWidgetSpec.Context?
     ) {
-        val violationsChanged = this.extraConstraintViolations != violations
-        if (violationsChanged)
-            notifyConstraintViolations(constraintViolations + violations)
-        if (violationsChanged || this.overrideCtx != overrideCtx) {
-            this.extraConstraintViolations = violations
-            this.overrideCtx = overrideCtx
+        if (violations != null && violations != this.constraintViolations ||
+            overrideCtx != null && overrideCtx != this.overrideCtx
+        ) {
+            violations?.let { this.constraintViolations = violations }
+            overrideCtx?.let { this.overrideCtx = overrideCtx }
             adjustActiveForm()
         }
-    }
-
-    private fun refreshConstraintViolations() {
-        constraintViolations = verifyConstraints(getCurrentStyling() ?: return)
-        notifyConstraintViolations(constraintViolations + extraConstraintViolations)
     }
 
     private fun refreshSwatchColors() {
@@ -219,12 +211,14 @@ class StyleFormAdjuster(
 
         // Push the issues AFTER the widgets have been adapted, because the leaf subject order in each widget needs to
         // match what the constraint verifier saw. Think about the font variations widget and its order of axes.
-        curForm.clearIssues()
-        for (violation in sequenceOf(constraintViolations, extraConstraintViolations).flatten())
-            if (violation.leafStyle == curStyle) {
-                val issue = Form.Notice(violation.severity, violation.msg)
-                curForm.showIssueIfMoreSevere(violation.leafSetting, violation.leafSubjectIndex, issue)
-            }
+        constraintViolations?.let { violations ->
+            curForm.clearIssues()
+            for (violation in violations)
+                if (violation.leafStyle === curStyle) {
+                    val issue = Form.Notice(violation.severity, violation.msg)
+                    curForm.showIssueIfMoreSevere(violation.leafSetting, violation.leafSubjectIndex, issue)
+                }
+        }
 
         val (nestedForms, nestedStyles) = curForm.getNestedFormsAndStyles(curStyle)
         for (idx in nestedForms.indices)

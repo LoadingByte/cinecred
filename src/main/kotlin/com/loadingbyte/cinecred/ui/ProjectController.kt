@@ -222,7 +222,7 @@ class ProjectController(
         val (creditsWorkbooks, _, projectFonts, pictureLoaders, tapes, origStyling) = input
         // If something hasn't been initialized yet, abort reading and drawing the credits.
         if (projectFonts == null || pictureLoaders == null || tapes == null || origStyling == null)
-            return doneProcessing(input, emptyList(), null, emptyList())
+            return doneProcessing(input, emptyList(), emptyList(), null, null)
 
         // Execute the reading and drawing in another thread to not block the UI thread.
         processingJobSlot.submit {
@@ -251,9 +251,10 @@ class ProjectController(
                 style.tape.tape?.loadMetadataInBackground()
 
             // If the styling is erroneous, abort and notify the UI about the error.
-            if (verifyConstraints(styling).any { it.severity == ERROR }) {
+            val earlyConstraintViolations = verifyConstraints(styling)
+            if (earlyConstraintViolations.any { it.severity == ERROR }) {
                 val error = ParserMsg(null, null, null, null, null, ERROR, l10n("ui.edit.stylingError"))
-                return@submit doneProcessing(input, listOf(error), null, emptyList())
+                return@submit doneProcessing(input, listOf(error), earlyConstraintViolations, styling, null)
             }
 
             // Parse each credits workbook.
@@ -358,20 +359,21 @@ class ProjectController(
                 if (drawnCredits.isEmpty()) null else DrawnCreditsBook(creditsBook, drawnCredits.toPersistentList())
             }
 
+            // Because the styling might have changed (e.g., with newly added popup styles), rerun the verification.
+            val constraintViolations = verifyConstraints(styling)
+
             // For each style that crushes a runtime group, show a warning in the styling UI.
-            val extraConstraintViolations = buildList {
-                for ((style, creditsIds) in crushingStyles) {
-                    val sett = if (style is Global) Global::runtimeFrames.st() else PageStyle::scrollRuntimeFrames.st()
-                    val sheets = l10nEnumQuoted(creditsIds.map { id -> "${id.fileName} \u2192 ${id.spreadsheetName}" })
-                    val msg = l10n("ui.styling.page.crushedVGaps", sheets)
-                    add(ConstraintViolation(style, style, sett, 0, WARN, msg))
-                }
+            for ((style, creditsIds) in crushingStyles) {
+                val sett = if (style is Global) Global::runtimeFrames.st() else PageStyle::scrollRuntimeFrames.st()
+                val sheets = l10nEnumQuoted(creditsIds.map { id -> "${id.fileName} \u2192 ${id.spreadsheetName}" })
+                val msg = l10n("ui.styling.page.crushedVGaps", sheets)
+                constraintViolations += ConstraintViolation(style, style, sett, 0, WARN, msg)
             }
 
             val project = Project(styling, creditsBooks.toPersistentList())
             val drawnProject = DrawnProject(project, drawnCreditsBooks.toPersistentList())
 
-            doneProcessing(input, log, drawnProject, extraConstraintViolations)
+            doneProcessing(input, log, constraintViolations, styling, drawnProject)
         }
     }
 
@@ -451,8 +453,9 @@ class ProjectController(
     private fun doneProcessing(
         input: Input,
         processingLog: List<ParserMsg>,
-        drawnProject: DrawnProject?,
-        extraConstraintViolations: List<ConstraintViolation>
+        constraintViolations: List<ConstraintViolation>,
+        styling: Styling?,
+        drawnProject: DrawnProject?
     ) {
         SwingUtilities.invokeLater {
             val logCmp = compareByDescending(ParserMsg::severity)
@@ -466,10 +469,11 @@ class ProjectController(
             val log = (input.ioLog + processingLog).sortedWith(logCmp)
             previewCtrl.updateLog(log)
             logCtrl.updateLog(log)
+            if (styling != null)
+                stylingDockable.updateProject(styling, constraintViolations, drawnProject)
             if (drawnProject != null) {
                 toolbarCtrl.updateProject(drawnProject)
                 previewCtrl.updateProject(drawnProject)
-                stylingDockable.updateProject(drawnProject, extraConstraintViolations)
                 playbackCtrl.updateProject(drawnProject)
                 deliveryCtrl.updateProject(drawnProject)
             }

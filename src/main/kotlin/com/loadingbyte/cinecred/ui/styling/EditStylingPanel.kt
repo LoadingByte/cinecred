@@ -84,8 +84,7 @@ class EditStylingPanel(private val ctrl: ProjectController) :
             pageStyleForm, contentStyleForm, letterStyleForm, transitionStyleForm, pictureStyleForm, tapeStyleForm
         ),
         getCurrentStyling = ::styling,
-        getCurrentStyleInActiveForm = { stylingTree.selected as Style? },
-        notifyConstraintViolations = ::updateConstraintViolations
+        getCurrentStyleInActiveForm = { stylingTree.selected as Style? }
     )
 
     // Cache the Styling which is currently stored in the tree, so that we don't have to repeatedly regenerate it.
@@ -406,45 +405,56 @@ class EditStylingPanel(private val ctrl: ProjectController) :
         formAdjuster.updateTapes(tapes)
     }
 
-    fun updateProject(drawnProject: DrawnProject, externalConstraintViolations: List<ConstraintViolation>) {
-        // Only update the grayed-out status of styles if the DrawnProject we received stems from the current Styling.
+    fun updateProject(styling: Styling, constraintViolations: List<ConstraintViolation>, drawnProject: DrawnProject?) {
+        // Update the grayed-out statuses and the violation icons of styles, but only if the constraint violations and
+        // drawn project we received stem from the current Styling.
         // If it doesn't, the Styling has changed again in the meantime, and we can't compare with the outdated usage
         // information because the identity of the styles has changed since then. If we didn't have this check, rapidly
-        // changing a style would cause it to blink gray and white in the styling tree.
-        if (drawnProject.project.styling === styling) {
-            val usedStyles = findUsedStyles(drawnProject.project)
-            stylingTree.adjustAppearance(isGrayedOut = { it is ListedStyle && it !in usedStyles })
+        // changing a style would cause it to flicker gray and white and have a flickering icon in the styling tree.
+        if (styling === this.styling) {
+            // Find the used styles.
+            val usedStyles = drawnProject?.let { findUsedStyles(drawnProject.project) }
+
+            // Find the icon severity per style.
+            val severityPerStyle = IdentityHashMap<Style, Severity>()
+            for (violation in constraintViolations)
+                severityPerStyle[violation.rootStyle] =
+                    maxOf(violation.severity, severityPerStyle.getOrDefault(violation.rootStyle, Severity.entries[0]))
+
+            // Apply the collected information to the styling tree.
+            stylingTree.adjustAppearance(
+                isGrayedOut = usedStyles?.let { { style -> style is ListedStyle && style !in usedStyles } },
+                getExtraIcons = { style ->
+                    val severity = severityPerStyle[style]
+                    if (severity == null || severity == Severity.INFO) emptyList() else listOf(severity.icon)
+                }
+            )
         }
 
-        // Find the runtime of the first credits sequence.
-        val runtime = drawnProject.drawnCreditsBooks.firstOrNull()?.drawnCredits?.firstOrNull()
-            ?.video?.numFrames ?: 0
+        // If the constraint violations don't stem from the current Styling, submit null, which will retain the previous
+        // notifications. Once again, this is to avoid notification flicker in the style form.
+        val submittedConstraintViolations = if (styling === this.styling) constraintViolations else null
 
-        // Find the runtime of the first occurrences of each individual scroll style.
-        val scrollStyleRuntimes = HashMap<String, Int>()
-        for (drawnCreditsBook in drawnProject.drawnCreditsBooks)
-            for (drawnCredits in drawnCreditsBook.drawnCredits)
-                for (drawnPage in drawnCredits.drawnPages)
-                    for ((stage, stageInfo) in drawnPage.page.stages.zip(drawnPage.stageInfo))
-                        if (stageInfo is DrawnStageInfo.Scroll)
-                            scrollStyleRuntimes.putIfAbsent(stage.style.name, stageInfo.frames)
+        // Assemble the override context. If the project couldn't be drawn, submit null, which will retain the old one.
+        val submittedOverrideCtx = drawnProject?.let {
+            // Find the runtime of the first credits sequence.
+            val runtime =
+                drawnProject.drawnCreditsBooks.firstOrNull()?.drawnCredits?.firstOrNull()?.video?.numFrames ?: 0
 
-        formAdjuster.updateExtraConstraintViolationsAndOverrideCtx(
-            externalConstraintViolations,
+            // Find the runtime of the first occurrences of each individual scroll style.
+            val scrollStyleRuntimes = HashMap<String, Int>()
+            for (drawnCreditsBook in drawnProject.drawnCreditsBooks)
+                for (drawnCredits in drawnCreditsBook.drawnCredits)
+                    for (drawnPage in drawnCredits.drawnPages)
+                        for ((stage, stageInfo) in drawnPage.page.stages.zip(drawnPage.stageInfo))
+                            if (stageInfo is DrawnStageInfo.Scroll)
+                                scrollStyleRuntimes.putIfAbsent(stage.style.name, stageInfo.frames)
+
             OverrideWidgetSpec.Context(runtime, scrollStyleRuntimes)
-        )
-    }
+        }
 
-    private fun updateConstraintViolations(constraintViolations: List<ConstraintViolation>) {
-        val severityPerStyle = IdentityHashMap<Style, Severity>()
-        for (violation in constraintViolations)
-            severityPerStyle[violation.rootStyle] =
-                maxOf(violation.severity, severityPerStyle.getOrDefault(violation.rootStyle, Severity.entries[0]))
-
-        stylingTree.adjustAppearance(getExtraIcons = { style ->
-            val severity = severityPerStyle[style]
-            if (severity == null || severity == Severity.INFO) emptyList() else listOf(severity.icon)
-        })
+        // Submit the constraint violations and override context.
+        formAdjuster.updateConstraintViolationsAndOverrideCtx(submittedConstraintViolations, submittedOverrideCtx)
     }
 
     override fun getMinimumSize(): Dimension =

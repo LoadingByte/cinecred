@@ -656,7 +656,7 @@ class ConstraintViolation(
     val msg: String?
 )
 
-fun verifyConstraints(styling: Styling): List<ConstraintViolation> {
+fun verifyConstraints(styling: Styling): MutableList<ConstraintViolation> {
     val violations = mutableListOf<ConstraintViolation>()
 
     fun log(

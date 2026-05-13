@@ -291,7 +291,7 @@ private fun <S : Style> renderStyleSettings(
         }
     }
     val formAdjuster = StyleFormAdjuster(
-        listOf(form), { curStyling }, { curStyle }, {},
+        listOf(form), { curStyling }, { curStyle },
         @Suppress("DEPRECATION")
         object : StyleFormAdjuster.StyleIdxAndSiblingsOverride {
             override fun <S : Style> getStyleIdxAndSiblings(style: S): Pair<Int, List<S>> =

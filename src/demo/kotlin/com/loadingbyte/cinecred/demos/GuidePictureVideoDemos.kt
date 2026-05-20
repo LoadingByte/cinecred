@@ -44,9 +44,7 @@ val GUIDE_PICTURE_VIDEO_DEMOS
 
 
 @Suppress("DEPRECATION")
-object GuidePictureVideoAutoAddDemo : ScreencastDemo(
-    "$DIR/auto-add", Format.VIDEO_GIF, 1100, 650
-) {
+object GuidePictureVideoAutoAddDemo : ScreencastDemo("$DIR/auto-add", Format.VIDEO_GIF, 1100, 650, 0.85) {
     override fun generate() {
         val creditsFile = projectDir.resolve("${projectDir.name}.csv")
         addProjectWindows(dockedTrees.apply { leaf(LOG).collapsed = true }, prepareProjectDir = {

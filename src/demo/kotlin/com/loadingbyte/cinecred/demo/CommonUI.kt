@@ -64,6 +64,7 @@ fun printWithPopups(component: Component, g2: Graphics2D) {
                 }
             }
         }
+        (g2 as? ScaledGraphics2D)?.settleDeferred()
 
         if (window is DockingFrame) {
             for (c in @Suppress("DEPRECATION") window.leakedRetractableButtons())
@@ -79,6 +80,7 @@ fun printWithPopups(component: Component, g2: Graphics2D) {
             val glassPane = window.glassPane
             if (glassPane.isVisible) {
                 glassPane.print(g2)
+                (g2 as? ScaledGraphics2D)?.settleDeferred()
             }
         }
     }
@@ -89,6 +91,7 @@ private fun printOverlay(overlay: Component, compLocOnScreen: Point, g2: Graphic
         g2.translate(overlay.x - compLocOnScreen.x, overlay.y - compLocOnScreen.y)
         overlay.print(g2)
     }
+    (g2 as? ScaledGraphics2D)?.settleDeferred()
 }
 
 inline fun forEachVisiblePopupOf(window: Window, action: (Window) -> Unit) {

@@ -20,7 +20,6 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseEvent.*
 import java.awt.geom.Path2D
 import java.awt.geom.Point2D
-import java.awt.image.BufferedImage
 import java.nio.file.Path
 import java.util.*
 import javax.swing.*
@@ -205,7 +204,6 @@ abstract class VirtualWindow {
         const val INSET_B = BORDER
         const val INSET_R = BORDER
         private val BORDER_COLOR = PALETTE_GRAY_COLOR.darker()
-        private val DUMMY_COMPONENT = JPanel()
     }
 
     var elapsedTime = 0.0  // seconds
@@ -221,7 +219,7 @@ abstract class VirtualWindow {
     open fun drag(mouse: Point2D.Double): Transferable? = null
     open fun drop(mouse: Point2D.Double, transferable: Transferable) {}
 
-    protected fun paintWindowDecorations(g2: Graphics2D, title: String, icon: BufferedImage?, bg: Color, fg: Color) {
+    protected fun paintWindowDecorations(g2: Graphics2D, title: String, icon: Icon?, bg: Color, fg: Color) {
         val (width, height) = size.run { Pair(width, height) }
         // Border
         g2.color = BORDER_COLOR
@@ -243,12 +241,12 @@ abstract class VirtualWindow {
         )
         // Icon
         if (icon != null) {
-            val iconGap = (TITLE_BAR_HEIGHT - icon.height) / 2
-            g2.drawImage(icon, BORDER + iconGap, BORDER + iconGap, null)
+            val iconGap = (TITLE_BAR_HEIGHT - icon.iconHeight) / 2
+            icon.paintIcon(null, g2, BORDER + iconGap, BORDER + iconGap)
         }
         // Close button
         val closeGap = (TITLE_BAR_HEIGHT - CANCEL_ICON.iconHeight) / 2
-        CANCEL_ICON.paintIcon(DUMMY_COMPONENT, g2, width - BORDER - closeGap - CANCEL_ICON.iconWidth, BORDER + closeGap)
+        CANCEL_ICON.paintIcon(null, g2, width - BORDER - closeGap - CANCEL_ICON.iconWidth, BORDER + closeGap)
     }
 
     /** Obtains virtual desktop coordinates for the title bar. */
@@ -269,7 +267,7 @@ abstract class VirtualWindow {
 class BackedVirtualWindow(private val backingWin: Window) : VirtualWindow() {
 
     companion object {
-        private val TITLE_BAR_ICON = WINDOW_ICON_IMAGES.first { it.height == 16 }
+        private val TITLE_BAR_ICON = WINDOW_ICON.run { getScaledIcon(16.0 / iconWidth) }
         private val TITLE_BAR_BACKGROUND = UIManager.getColor("Panel.background")
         private val TITLE_BAR_FOREGROUND = UIManager.getColor("Panel.foreground")
     }
@@ -527,6 +525,7 @@ abstract class FakeVirtualWindow : VirtualWindow() {
         g2.fillRect(INSET_L, INSET_T, size.width - INSET_L - INSET_R, size.height - INSET_T - INSET_B)
         // Paint content
         paintContent(g2)
+        (g2 as? ScaledGraphics2D)?.settleDeferred()
     }
 
 }

@@ -54,7 +54,7 @@ val GUIDE_USER_INTERFACE_DEMOS
     )
 
 
-object GuideUserInterfaceTogglePanelsDemo : ScreencastDemo("$DIR/toggle-panels", Format.VIDEO_GIF, 1100, 650) {
+object GuideUserInterfaceTogglePanelsDemo : ScreencastDemo("$DIR/toggle-panels", Format.VIDEO_GIF, 1100, 650, 0.85) {
     override fun generate() {
         addProjectWindows(dockedTrees)
 
@@ -228,11 +228,9 @@ object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-cust
 }
 
 
-object GuideUserInterfaceEditDemo : ScreencastDemo(
-    "$DIR/edit", Format.VIDEO_GIF, 1100, 650
-) {
+object GuideUserInterfaceEditDemo : ScreencastDemo("$DIR/edit", Format.VIDEO_GIF, 1100, 650, 0.85) {
     override fun generate() {
-        addProjectWindows(dockedTrees.apply { leaf(LOG).collapsed = true })
+        addProjectWindows(dockedTrees.apply { single().root.ratio = 0.37; leaf(LOG).collapsed = true })
 
         sc.hold(2 * hold)
         sc.mouseTo(prjWin.desktopPosOfTreeItem(styTree, l10n("ui.styling.globalStyling")))
@@ -261,11 +259,9 @@ object GuideUserInterfaceEditDemo : ScreencastDemo(
 }
 
 
-object GuideUserInterfaceResetDemo : ScreencastDemo(
-    "$DIR/reset", Format.VIDEO_GIF, 1100, 650
-) {
+object GuideUserInterfaceResetDemo : ScreencastDemo("$DIR/reset", Format.VIDEO_GIF, 1100, 650, 0.85) {
     override fun generate() {
-        addProjectWindows(dockedTrees.apply { leaf(LOG).collapsed = true })
+        addProjectWindows(dockedTrees.apply { single().root.ratio = 0.37; leaf(LOG).collapsed = true })
 
         sc.hold(2 * hold)
         sc.mouseTo(prjWin.desktopPosOfTreeItem(styTree, l10n("project.template.letterStyleCardName")))
@@ -285,7 +281,7 @@ object GuideUserInterfaceResetDemo : ScreencastDemo(
 
 
 object GuideUserInterfaceSnapSpreadsheetEditorDemo : ScreencastDemo(
-    "$DIR/snap-spreadsheet-editor", Format.VIDEO_GIF, 1100, 650
+    "$DIR/snap-spreadsheet-editor", Format.VIDEO_GIF, 1100, 650, 0.85
 ) {
     override fun generate() {
         addProjectWindows(dockedTrees.apply { leaf(LOG).collapsed = true })
@@ -514,7 +510,7 @@ object GuideUserInterfaceDeliveryDestTemplateDemo : ScreencastDemo(
 }
 
 
-object GuideUserInterfaceWarningsDemo : ScreencastDemo("$DIR/warnings", Format.PNG, 1100, 650) {
+object GuideUserInterfaceWarningsDemo : ScreencastDemo("$DIR/warnings", Format.PNG, 1100, 650, 0.85) {
     override fun generate() {
         addProjectWindows(dockedTrees.apply { parent(LOG).ratio = 0.83 })
 

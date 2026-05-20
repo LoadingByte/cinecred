@@ -1,6 +1,5 @@
 package com.loadingbyte.cinecred.ui.ctrl
 
-import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.drawer.DrawnProject
 import com.loadingbyte.cinecred.imaging.*
@@ -11,6 +10,7 @@ import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.CreditsId
 import com.loadingbyte.cinecred.ui.comms.PlaybackCtrlComms
 import com.loadingbyte.cinecred.ui.comms.PlaybackViewComms
+import com.loadingbyte.cinecred.ui.helper.getSystemScaleFactor
 import java.awt.Dimension
 import java.awt.GraphicsConfiguration
 import java.awt.Transparency
@@ -167,7 +167,7 @@ class PlaybackCtrl : PlaybackCtrlComms {
         val nativeCM = gCfg.getColorModel(Transparency.OPAQUE) ?: return
         val frameSize = this.videoCanvasSize ?: return
 
-        val systemScaling = UIScale.getSystemScaleFactor(gCfg)
+        val systemScaling = getSystemScaleFactor(gCfg)
         val awtFrameSourceScaling = if (actualSize) 1.0 else
             systemScaling * min(
                 frameSize.width / global.resolution.widthPx.toDouble(),

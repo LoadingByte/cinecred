@@ -679,6 +679,19 @@ val GraphicsConfiguration.usableBounds: Rectangle
     }
 
 
+@Volatile private var extraSystemScaleFactor = 1.0
+
+fun getSystemScaleFactor(g2: Graphics2D) = UIScale.getSystemScaleFactor(g2) * extraSystemScaleFactor
+fun getSystemScaleFactor(gCfg: GraphicsConfiguration) = UIScale.getSystemScaleFactor(gCfg) * extraSystemScaleFactor
+
+// ========== ENCAPSULATION LEAKS ==========
+@Deprecated("ENCAPSULATION LEAK")
+fun setExtraSystemScaleFactor(factor: Double) {
+    extraSystemScaleFactor = factor
+}
+// =========================================
+
+
 class KeyListener(
     private val shortcut: Shortcut,
     private val listener: () -> Unit

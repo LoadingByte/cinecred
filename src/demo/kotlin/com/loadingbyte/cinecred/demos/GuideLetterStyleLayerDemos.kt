@@ -36,11 +36,11 @@ val GUIDE_LETTER_STYLE_LAYER_DEMOS
 
 
 @Suppress("DEPRECATION")
-object GuideLetterStyleLayerHandlingDemo : ScreencastDemo("$DIR/handling", Format.VIDEO_GIF, 1100, 700) {
+object GuideLetterStyleLayerHandlingDemo : ScreencastDemo("$DIR/handling", Format.VIDEO_GIF, 1100, 700, 0.85) {
     override fun generate() {
         addProjectWindows(
-            dockedTrees.apply { single().root.ratio = 0.33; leaf(LOG).collapsed = true },
-            styWinSplitRatio = 0.17
+            dockedTrees.apply { single().root.ratio = 0.37; leaf(LOG).collapsed = true },
+            styWinSplitRatio = 0.2
         )
 
         val oldStyling = projectCtrl.stylingHistory.current

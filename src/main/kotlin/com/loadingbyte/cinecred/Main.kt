@@ -8,7 +8,6 @@ import com.formdev.flatlaf.FlatIconColors
 import com.formdev.flatlaf.FlatSystemProperties
 import com.formdev.flatlaf.util.HSLColor
 import com.formdev.flatlaf.util.SystemInfo
-import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.*
 import com.loadingbyte.cinecred.imaging.DeckLink
 import com.loadingbyte.cinecred.ui.UIFactory
@@ -282,7 +281,7 @@ Locale: ${Locale.getDefault().toLanguageTag()}
 
     private fun sendReport(header: String) {
         val win = FocusManager.getCurrentKeyboardFocusManager().activeWindow
-        val s = UIScale.getSystemScaleFactor(
+        val s = getSystemScaleFactor(
             win?.graphicsConfiguration
                 ?: GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
         )

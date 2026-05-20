@@ -10,6 +10,7 @@ import com.loadingbyte.cinecred.ui.UIFactory
 import com.loadingbyte.cinecred.ui.ctrl.MasterCtrl
 import com.loadingbyte.cinecred.ui.ctrl.WelcomeCtrl
 import com.loadingbyte.cinecred.ui.helper.DockingFrame
+import com.loadingbyte.cinecred.ui.helper.setExtraSystemScaleFactor
 import com.loadingbyte.cinecred.ui.helper.withG2
 import com.loadingbyte.cinecred.ui.styling.StyleForm
 import com.loadingbyte.cinecred.ui.view.welcome.WelcomeFrame
@@ -26,14 +27,16 @@ import java.text.AttributedString
 import javax.swing.*
 import javax.swing.text.JTextComponent
 import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 
 @Suppress("DEPRECATION")
 abstract class ScreencastDemo(
     filename: String,
     format: Format,
-    private val desktopWidth: Int = 1280,
-    private val desktopHeight: Int = 720,
+    private val imageWidth: Int = 1280,
+    private val imageHeight: Int = 720,
+    private val desktopScale: Double = 1.0,
     protected val hold: Int = 500,
     private val captions: Boolean = false
 ) : Demo(filename, format) {
@@ -43,10 +46,19 @@ abstract class ScreencastDemo(
     override fun doGenerate() {
         withDemoProjectDir { projectDir ->
             this.projectDir = projectDir
-            dt = VirtualDesktop(desktopWidth, desktopHeight - if (captions) 200 else 0)
-            sc = Screencast(::write, format.fps, dt, hold, captionHeight = if (captions) 200 else 0, captionGap = 40)
+            val captionHeight = if (captions) 200 else 0
+            dt = VirtualDesktop(
+                (imageWidth / desktopScale).roundToInt(),
+                ((imageHeight - captionHeight) / desktopScale).roundToInt()
+            )
+            sc = Screencast(::write, format.fps, imageWidth, imageHeight, dt, desktopScale, hold, captionHeight, 40)
             masterCtrl = UIFactory().master() as MasterCtrl
-            generate()
+            setExtraSystemScaleFactor(desktopScale)
+            try {
+                generate()
+            } finally {
+                setExtraSystemScaleFactor(1.0)
+            }
             edt { Window.getWindows().forEach(Window::dispose) }
             sleep(100)
         }
@@ -191,9 +203,12 @@ abstract class ScreencastDemo(
 class Screencast(
     private val writeFrame: (BufferedImage) -> Unit,
     private val fps: FPS,
+    private val imageWidth: Int,
+    private val imageHeight: Int,
     private val desktop: VirtualDesktop,
+    private val desktopScale: Double,
     private val hold: Int,
-    captionHeight: Int,
+    private val captionHeight: Int,
     private val captionGap: Int
 ) {
 
@@ -204,27 +219,24 @@ class Screencast(
             .let(FontUtilities::getCompositeFontUIResource)
     }
 
-    private val width = desktop.width
-    private val height = desktop.height + captionHeight
-
     private var caption = mutableListOf<TextLayout>()
 
     fun frame(action: (() -> Unit)? = null) {
         action?.invoke()
         desktop.tick(1.0 / fps.frac)
-        writeFrame(BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR).withG2 { g2 ->
+        writeFrame(BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_3BYTE_BGR).withG2 { g2 ->
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             // Paint wallpaper
             g2.color = Color(24, 24, 24)
-            g2.fillRect(0, 0, width, desktop.height)
+            g2.fillRect(0, 0, imageWidth, imageHeight - captionHeight)
             // Paint desktop
-            desktop.paint(g2)
+            desktop.paint(ScaledGraphics2D(g2, desktopScale))
             // Paint caption
             g2.color = Color.WHITE
-            var captionY = (desktop.height + captionGap).toFloat()
+            var captionY = (imageHeight - captionHeight + captionGap).toFloat()
             for (line in caption) {
                 captionY += line.ascent
-                line.draw(g2, (width - line.advance) / 2f, captionY)
+                line.draw(g2, (imageWidth - line.advance) / 2f, captionY)
                 captionY += line.descent + line.leading
             }
         })
@@ -304,7 +316,7 @@ class Screencast(
             caption.clear()
             val lbm = LineBreakMeasurer(AttributedString(text, attrs).iterator, FontRenderContext(null, true, true))
             while (lbm.position != text.length)
-                caption.add(lbm.nextLayout(width * ratio))
+                caption.add(lbm.nextLayout(imageWidth * ratio))
             if (caption.size <= 2)
                 break
         }

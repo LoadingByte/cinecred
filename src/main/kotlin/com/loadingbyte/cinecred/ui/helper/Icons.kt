@@ -28,13 +28,13 @@ import kotlin.math.roundToInt
 const val ICON_ICON_GAP = 4
 
 
+val WINDOW_ICON = SVGIcon.load("/logo.svg")
 val WINDOW_ICON_IMAGES = run {
-    val logo = requireNotNull(SVGLoader().load(SVGIcon::class.java.getResource("/logo.svg")!!)) { "Can't load logo." }
     listOf(16, 20, 24, 32, 40, 48, 64, 128, 256).map { size ->
         BufferedImage(size, size, BufferedImage.TYPE_4BYTE_ABGR).withG2 { g2 ->
             g2.setHighQuality()
-            g2.scale(size / logo.size().width.toDouble())
-            logo.render(null, g2)
+            g2.scale(size / WINDOW_ICON.iconWidth.toDouble())
+            WINDOW_ICON.paintIcon(null, g2, 0, 0)
         }
     }
 }
@@ -603,7 +603,7 @@ class SVGIcon private constructor(
     null
 ), FlatLaf.DisabledIconProvider {
 
-    override fun paintIcon(c: Component, g2: Graphics2D) {
+    override fun paintIcon(c: Component?, g2: Graphics2D) {
         fun paintTo(g2: Graphics2D) {
             if (xScaling == 1.0 && yScaling == 1.0 && rotation == 0.0)
                 svg.render(c as? JComponent, g2)

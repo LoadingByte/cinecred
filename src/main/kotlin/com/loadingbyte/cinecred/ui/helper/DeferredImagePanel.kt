@@ -1,7 +1,6 @@
 package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.ui.FlatUIUtils
-import com.formdev.flatlaf.util.UIScale
 import com.loadingbyte.cinecred.common.JobSlot
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.l10n
@@ -259,7 +258,7 @@ class DeferredImagePanel(
         get() = zoom * canvas.width.also { require(it != 0) } / image!!.width
     private val physicalImageScaling
         // Safeguard in case the graphics object is not yet ready or has already been discarded; this happens sometimes.
-        get() = imageScaling * ((canvas.graphics as Graphics2D?)?.let(UIScale::getSystemScaleFactor) ?: 1.0)
+        get() = imageScaling * ((canvas.graphics as Graphics2D?)?.let(::getSystemScaleFactor) ?: 1.0)
 
     private fun coerceViewportAndCalibrateScrollbars() {
         val image = this.image

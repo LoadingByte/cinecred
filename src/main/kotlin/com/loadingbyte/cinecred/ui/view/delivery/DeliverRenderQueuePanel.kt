@@ -12,6 +12,7 @@ import com.loadingbyte.cinecred.ui.helper.*
 import com.loadingbyte.cinecred.ui.view.delivery.DeliverConfigurationForm.Companion.label
 import java.awt.Dimension
 import java.text.DecimalFormat
+import java.time.Duration
 import java.util.*
 import javax.swing.*
 import javax.swing.table.AbstractTableModel
@@ -23,9 +24,9 @@ class DeliverRenderQueuePanel(deliveryCtrl: DeliveryCtrlComms) : JScrollPane(), 
 
     // ========== ENCAPSULATION LEAKS ==========
     @Deprecated("ENCAPSULATION LEAK")
-    fun leakedProgressSetter(rowIdx: Int, progress: Int = 0, isFinished: Boolean = false) {
+    fun leakedProgressSetter(rowIdx: Int, progress: Int = 0, time: Duration? = null, isFinished: Boolean = false) {
         jobTableModel.rows[rowIdx].status =
-            if (isFinished) RenderJobStatus.Done(null) else RenderJobStatus.Running(progress, null)
+            if (isFinished) RenderJobStatus.Done(time) else RenderJobStatus.Running(progress, time)
         jobTableModel.fireTableCellUpdated(rowIdx, 5)
     }
     // =========================================

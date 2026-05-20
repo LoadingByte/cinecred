@@ -18,6 +18,7 @@ import com.loadingbyte.cinecred.ui.helper.DropdownPopupMenuCheckBoxItem
 import com.loadingbyte.cinecred.ui.styling.OverrideWidgetSpec
 import java.awt.KeyboardFocusManager
 import java.lang.Thread.sleep
+import java.time.Duration
 import javax.swing.JTextField
 import javax.swing.JTree
 import kotlin.io.path.Path
@@ -104,7 +105,7 @@ object HomeScreenshotDeliveryDemo : ProjectDemo("$DIR/screenshot-delivery", Form
             dlvDok.leakedRenderQueuePanel.apply {
                 leakedProgressSetter(0, isFinished = true)
                 leakedProgressSetter(1, isFinished = true)
-                leakedProgressSetter(2, progress = 800)
+                leakedProgressSetter(2, progress = 800, time = Duration.ofSeconds(83))
             }
         }
         sleep(500)

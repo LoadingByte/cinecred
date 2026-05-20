@@ -82,14 +82,8 @@ abstract class WriteAppStreamFile : DefaultTask() {
             appendChild(doc.createElement("name", developer.get()))
         })
         comp.appendChild(doc.createElement("screenshots").apply {
-            appendChild(makeLocalizedScreenshot(doc, "screenshot-live-vis-guides-on").apply {
+            appendChild(makeLocalizedScreenshot(doc, "screenshot").apply {
                 setAttribute("type", "default")
-            })
-            appendChild(makeLocalizedScreenshot(doc, "screenshot-styling"))
-            appendChild(makeLocalizedScreenshot(doc, "screenshot-video-preview"))
-            appendChild(makeLocalizedScreenshot(doc, "screenshot-delivery-options"))
-            appendChild(doc.createElement("screenshot").apply {
-                appendChild(doc.createElement("image", "https://cinecred.com/assets/credits-media.png"))
             })
         })
         comp.appendChild(doc.createElement("content_rating").apply {
@@ -111,7 +105,7 @@ abstract class WriteAppStreamFile : DefaultTask() {
     private fun makeLocalizedScreenshot(doc: Document, name: String): Element {
         val elem = doc.createElement("screenshot")
         for (locale in summaries.get().keys) {
-            val url = "https://cinecred.com/assets/$name.${locale.toLanguageTag()}.png"
+            val url = "https://cinecred.com/home/$name.${locale.toLanguageTag()}.png"
             elem.appendChild(makeLocalized(doc, "image", locale, url))
         }
         return elem

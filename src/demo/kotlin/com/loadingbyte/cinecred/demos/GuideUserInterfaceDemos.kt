@@ -427,10 +427,9 @@ object GuideUserInterfaceDeliveryDestTemplateDemo : ScreencastDemo(
         sc.hold(4 * hold)
         sc.type(welcomeWin, prefsPanel.leakedCfgTemplateNameWidget.components[0] as JTextField, "Demo")
         for (elem in listOf(PROJECT, " ", FORMAT, " ", FRAME_RATE, SCAN)) when (elem) {
-            is String -> {
+            is String -> edt {
                 val ta = (prefsPanel.leakedCfgTemplateStrWidget.components[0] as JScrollPane).viewport.view as JTextArea
                 ta.append(elem)
-                ta.caretPosition += elem.length
             }
             is DeliveryDestTemplate.Placeholder -> {
                 sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgTemplateStrWidget.components[1]))
@@ -444,7 +443,7 @@ object GuideUserInterfaceDeliveryDestTemplateDemo : ScreencastDemo(
         sc.mouseTo(welcomeWin.desktopPosOfCloseButton())
 
         removeWelcomeWindow()
-        welcomeFrame.close()
+        edt { welcomeFrame.close() }
 
         sc.hold(2 * hold)
         sc.mouseTo(prjWin.desktopPosOf(dlvDestTempl))

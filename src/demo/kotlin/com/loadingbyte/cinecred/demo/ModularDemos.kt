@@ -299,9 +299,11 @@ private fun <S : Style> renderStyleSettings(
         }
     )
     formAdjuster.activeForm = form
-    formAdjuster.updatePictureLoaders(pictureLoaders.associateBy { it.file.name })
-    formAdjuster.updateTapes(tapes.associateBy { it.fileOrDir.name })
-    formAdjuster.updateConstraintViolationsAndOverrideCtx(null, overrideCtx)
+    edt {
+        formAdjuster.updatePictureLoaders(pictureLoaders.associateBy { it.file.name })
+        formAdjuster.updateTapes(tapes.associateBy { it.fileOrDir.name })
+        formAdjuster.updateConstraintViolationsAndOverrideCtx(null, overrideCtx)
+    }
     sleep(500)
     edt { KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner() }
 
@@ -325,19 +327,22 @@ private fun <S : Style> renderStyleSettings(
                 .requireIsInstance(styleClass)
             curStyleIdx = siblingStyles.indexOf(style)
         }
-        edt { form.open(style) }
-        formAdjuster.onLoadStyling()
-        formAdjuster.onLoadStyleIntoActiveForm()
+        edt {
+            form.open(style)
+            formAdjuster.onLoadStyling()
+            formAdjuster.onLoadStyleIntoActiveForm()
+        }
 
         // Only remove the notices if they could actually slide into view (which can only happen if there are multiple
         // settings being captures). This is necessary because the uppercase exceptions text area doesn't grow to
         // multiple lines if its notice is removed (... for some reason).
-        if (settings.size > 1)
+        if (settings.size > 1) edt {
             for (sett in settings)
                 form.getFormRowFor(sett)?.apply {
                     notice = null
                     noticeOverride = null
                 }
+        }
 
         sleep(50)
 

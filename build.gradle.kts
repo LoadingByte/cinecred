@@ -25,7 +25,7 @@ val flatlafVersion = "3.7.1"
 // Versions of custom-built native libraries; upon updating, rebuild them following MAINTENANCE.md:
 val skiaVersion = "e2ea2eb" // head of branch chrome/m124
 val harfBuzzVersion = "14.2.0"
-val zimgVersion = "0e56801"
+val zimgVersion = "fa52dee"
 val nfdVersion = "17b6e8c"
 
 val javaProperties = Properties().apply { file("java.properties").reader().use(::load) }

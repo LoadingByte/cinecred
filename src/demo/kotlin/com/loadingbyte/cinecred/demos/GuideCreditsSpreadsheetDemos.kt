@@ -23,8 +23,10 @@ val GUIDE_CREDITS_SPREADSHEET_DEMOS
         GuideCreditsSpreadsheetSpinePositionCardDemo,
         GuideCreditsSpreadsheetSpinePositionParallelDemo,
         GuideCreditsSpreadsheetSpinePositionHookDemo,
+        GuideCreditsSpreadsheetPageGapFadeIntoScrollDemo,
         GuideCreditsSpreadsheetPageGapMeltDemo,
-        GuideCreditsSpreadsheetPageGapMeltVideoDemo,
+        GuideCreditsSpreadsheetPageGapMeltHardDemo,
+        GuideCreditsSpreadsheetPageGapMeltSmoothDemo,
         GuideCreditsSpreadsheetPageGapScrollAwayDemo,
         GuideCreditsSpreadsheetBreakHarmonizationDemo
     )
@@ -166,6 +168,20 @@ I’m with my friend!,,Hook 1 Bottom-Top 0 200,
 }
 
 
+object GuideCreditsSpreadsheetPageGapFadeIntoScrollDemo : VideoDemo(
+    "$DIR/page-gap-fade-into-scroll", Format.VIDEO_GIF
+) {
+    override val isLocaleSensitive get() = false
+    override fun credits() = """
+@Head,@Body,@Content Style,@Page Style,@Page Runtime,@Page Gap
+1st AC,Paul Puller,Gutter,Scroll,,
+2nd AC,Charly Clapper,,,,
+,,,,,-00:00:01:12
+,Copyright © 2023,Blurb,Card,00:00:03:00,
+        """.parseCreditsPS()
+}
+
+
 object GuideCreditsSpreadsheetPageGapMeltDemo : PageDemo(
     "$DIR/page-gap-melt", Format.STEP_GIF, pageWidth = 700, pageGuides = true
 ) {
@@ -184,7 +200,19 @@ object GuideCreditsSpreadsheetPageGapMeltDemo : PageDemo(
 }
 
 
-object GuideCreditsSpreadsheetPageGapMeltVideoDemo : VideoDemo("$DIR/page-gap-melt-video", Format.VIDEO_GIF) {
+object GuideCreditsSpreadsheetPageGapMeltHardDemo : VideoDemo("$DIR/page-gap-melt-hard", Format.VIDEO_GIF) {
+    override val isLocaleSensitive get() = false
+    override fun credits() = """
+@Head,@Body,@Tail,@Vertical Gap,@Content Style,@Page Style,@Page Runtime,@Page Gap
+1st AC,Paul Puller,,,Gutter,Scroll,,
+2nd AC,Charly Clapper,,,,,,
+,,,5,,,,Melt
+,Copyright © 2023,,,Blurb,Card,00:00:03:00,
+        """.parseCreditsPS()
+}
+
+
+object GuideCreditsSpreadsheetPageGapMeltSmoothDemo : VideoDemo("$DIR/page-gap-melt-smooth", Format.VIDEO_GIF) {
     override val isLocaleSensitive get() = false
     override fun credits() = """
 @Head,@Body,@Tail,@Vertical Gap,@Content Style,@Page Style,@Page Runtime,@Page Gap

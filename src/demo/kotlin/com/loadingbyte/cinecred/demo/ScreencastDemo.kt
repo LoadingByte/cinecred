@@ -5,8 +5,7 @@ import com.loadingbyte.cinecred.common.useResourceStream
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.CsvFormat
 import com.loadingbyte.cinecred.projectio.tryCopyTemplate
-import com.loadingbyte.cinecred.ui.ProjectController
-import com.loadingbyte.cinecred.ui.UIFactory
+import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.ctrl.MasterCtrl
 import com.loadingbyte.cinecred.ui.ctrl.WelcomeCtrl
 import com.loadingbyte.cinecred.ui.helper.DockingFrame
@@ -53,14 +52,32 @@ abstract class ScreencastDemo(
             )
             sc = Screencast(::write, format.fps, imageWidth, imageHeight, dt, desktopScale, hold, captionHeight, 40)
             masterCtrl = UIFactory().master() as MasterCtrl
+
             setExtraSystemScaleFactor(desktopScale)
+            edt { ToolTipManager.sharedInstance().isEnabled = false }
+            val backedUpProjectDirs = PROJECT_DIRS_PREFERENCE.get()
+            val backedUpDefaultWindowLayout = DEFAULT_WINDOW_LAYOUT_PREFERENCE.get()
+            val backedUpWindowLayouts = WINDOW_LAYOUTS_PREFERENCE.get()
+            val backedUpOverlays = OVERLAYS_PREFERENCE.get()
+            val backedUpDeliveryDestTemplates = DELIVERY_DEST_TEMPLATES_PREFERENCE.get()
+            PROJECT_DIRS_PREFERENCE.set(emptyList())
+            DEFAULT_WINDOW_LAYOUT_PREFERENCE.set("null")
+            WINDOW_LAYOUTS_PREFERENCE.set(emptyList())
+            OVERLAYS_PREFERENCE.set(emptyList())
+            DELIVERY_DEST_TEMPLATES_PREFERENCE.set(emptyList())
             try {
                 generate()
+                edt { Window.getWindows().forEach(Window::dispose) }
+                sleep(100)
             } finally {
                 setExtraSystemScaleFactor(1.0)
+                edt { ToolTipManager.sharedInstance().isEnabled = true }
+                PROJECT_DIRS_PREFERENCE.set(backedUpProjectDirs)
+                DEFAULT_WINDOW_LAYOUT_PREFERENCE.set(backedUpDefaultWindowLayout)
+                WINDOW_LAYOUTS_PREFERENCE.set(backedUpWindowLayouts)
+                OVERLAYS_PREFERENCE.set(backedUpOverlays)
+                DELIVERY_DEST_TEMPLATES_PREFERENCE.set(backedUpDeliveryDestTemplates)
             }
-            edt { Window.getWindows().forEach(Window::dispose) }
-            sleep(100)
         }
         masterCtrl = null
     }
@@ -70,7 +87,11 @@ abstract class ScreencastDemo(
         welcomeWin = BackedVirtualWindow(welcomeFrame)
         dt.add(welcomeWin)
         sleep(500)
-        edt { welcomeFrame.projects_start_setMemorized(emptyList()) }
+        edt {
+            welcomeFrame.preferences_start_setUILocaleWish(LocaleWish.System)
+            welcomeFrame.preferences_start_setCheckForUpdates(true)
+            welcomeFrame.preferences_start_setAccounts(emptyList())
+        }
         if (fullscreen)
             dt.fullscreen(welcomeWin)
         else

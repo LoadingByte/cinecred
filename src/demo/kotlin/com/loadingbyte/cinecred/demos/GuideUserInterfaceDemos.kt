@@ -17,11 +17,8 @@ import com.loadingbyte.cinecred.project.Global
 import com.loadingbyte.cinecred.project.LetterStyle
 import com.loadingbyte.cinecred.project.Scan
 import com.loadingbyte.cinecred.project.st
-import com.loadingbyte.cinecred.ui.DELIVERY_DEST_TEMPLATES_PREFERENCE
 import com.loadingbyte.cinecred.ui.DeliveryDestTemplate
 import com.loadingbyte.cinecred.ui.DeliveryDestTemplate.Placeholder.*
-import com.loadingbyte.cinecred.ui.LocaleWish
-import com.loadingbyte.cinecred.ui.OVERLAYS_PREFERENCE
 import com.loadingbyte.cinecred.ui.comms.DockableId.*
 import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
 import java.awt.Dimension
@@ -132,16 +129,6 @@ object GuideUserInterfaceLayoutGuidesDemo : ScreencastDemo("$DIR/layout-guides",
 
 object GuideUserInterfaceOverlaysStandardDemo : ScreencastDemo("$DIR/overlays-standard", Format.VIDEO_GIF, 850, 600) {
     override fun generate() {
-        val backedUpOverlays = OVERLAYS_PREFERENCE.get()
-        OVERLAYS_PREFERENCE.set(emptyList())
-        try {
-            generate2()
-        } finally {
-            OVERLAYS_PREFERENCE.set(backedUpOverlays)
-        }
-    }
-
-    private fun generate2() {
         addProjectWindows(trees(tree(vSplit(TOOLBAR, PREVIEW))))
 
         edt { tolDok.leakedGuidesButton.isSelected = false }
@@ -166,18 +153,6 @@ object GuideUserInterfaceOverlaysStandardDemo : ScreencastDemo("$DIR/overlays-st
 
 object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-custom", Format.VIDEO_GIF, 900, 620) {
     override fun generate() {
-        ToolTipManager.sharedInstance().isEnabled = false
-        val backedUpOverlays = OVERLAYS_PREFERENCE.get()
-        OVERLAYS_PREFERENCE.set(emptyList())
-        try {
-            generate2()
-        } finally {
-            ToolTipManager.sharedInstance().isEnabled = true
-            OVERLAYS_PREFERENCE.set(backedUpOverlays)
-        }
-    }
-
-    private fun generate2() {
         addProjectWindows(trees(tree(vSplit(TOOLBAR, PREVIEW))))
 
         edt { tolDok.leakedGuidesButton.isSelected = false }
@@ -194,10 +169,6 @@ object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-cust
         addWelcomeWindow()
         welcomeWin.size = Dimension(750, 500)
         dt.center(welcomeWin)
-        welcomeFrame.preferences_start_setUILocaleWish(LocaleWish.System)
-        welcomeFrame.preferences_start_setCheckForUpdates(true)
-        welcomeFrame.preferences_start_setAccounts(emptyList())
-        welcomeFrame.preferences_start_setDeliveryDestTemplates(emptyList())
 
         sc.hold(4 * hold)
         for (idx in 2 downTo 1) {
@@ -421,18 +392,6 @@ object GuideUserInterfaceDeliveryDestTemplateDemo : ScreencastDemo(
     "$DIR/delivery-dest-template", Format.VIDEO_GIF, 850, 620
 ) {
     override fun generate() {
-        ToolTipManager.sharedInstance().isEnabled = false
-        val backedUpTemplates = DELIVERY_DEST_TEMPLATES_PREFERENCE.get()
-        DELIVERY_DEST_TEMPLATES_PREFERENCE.set(emptyList())
-        try {
-            generate2()
-        } finally {
-            ToolTipManager.sharedInstance().isEnabled = true
-            DELIVERY_DEST_TEMPLATES_PREFERENCE.set(backedUpTemplates)
-        }
-    }
-
-    private fun generate2() {
         addProjectWindows(trees(tree(vSplit(TOOLBAR, DELIVERY))))
 
         for (idx in intArrayOf(3, 5)) {
@@ -456,10 +415,6 @@ object GuideUserInterfaceDeliveryDestTemplateDemo : ScreencastDemo(
         addWelcomeWindow()
         welcomeWin.size = Dimension(750, 490)
         dt.center(welcomeWin)
-        welcomeFrame.preferences_start_setUILocaleWish(LocaleWish.System)
-        welcomeFrame.preferences_start_setCheckForUpdates(true)
-        welcomeFrame.preferences_start_setAccounts(emptyList())
-        welcomeFrame.preferences_start_setOverlays(emptyList())
 
         sc.hold(4 * hold)
         sc.type(welcomeWin, prefsPanel.leakedCfgTemplateNameWidget.components[0] as JTextField, "Demo")

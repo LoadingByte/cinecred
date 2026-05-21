@@ -8,8 +8,6 @@ import com.loadingbyte.cinecred.demo.SpreadsheetEditorVirtualWindow
 import com.loadingbyte.cinecred.demo.edt
 import com.loadingbyte.cinecred.project.*
 import com.loadingbyte.cinecred.projectio.CsvFormat
-import com.loadingbyte.cinecred.ui.DEFAULT_WINDOW_LAYOUT_PREFERENCE
-import com.loadingbyte.cinecred.ui.PresetWindowLayout
 import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
 import kotlinx.collections.immutable.persistentListOf
 import java.awt.Dimension
@@ -17,7 +15,6 @@ import java.awt.KeyboardFocusManager
 import java.awt.Point
 import java.lang.Thread.sleep
 import java.text.NumberFormat
-import javax.swing.ToolTipManager
 import kotlin.io.path.*
 
 
@@ -32,20 +29,8 @@ val SCREENCAST_DEMOS
 object ScreencastScreencastDemo : ScreencastDemo(
     "$DIR/screencast", Format.MP4, 1920, 1080, hold = 250, captions = true
 ) {
-    override fun generate() {
-        ToolTipManager.sharedInstance().isEnabled = false
-        val backedUpDefault = DEFAULT_WINDOW_LAYOUT_PREFERENCE.get()
-        DEFAULT_WINDOW_LAYOUT_PREFERENCE.set(PresetWindowLayout.PRESET_DOCKED.name)
-        try {
-            generate2()
-        } finally {
-            ToolTipManager.sharedInstance().isEnabled = true
-            DEFAULT_WINDOW_LAYOUT_PREFERENCE.set(backedUpDefault)
-        }
-    }
-
     @Suppress("DEPRECATION")
-    private fun generate2() {
+    override fun generate() {
         addWelcomeWindow()
 
         sc.caption("screencast.caption.create.welcome")

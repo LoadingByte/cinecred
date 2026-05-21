@@ -7,7 +7,6 @@ import com.loadingbyte.cinecred.projectio.Spreadsheet
 import com.loadingbyte.cinecred.projectio.SpreadsheetLook
 import com.loadingbyte.cinecred.projectio.service.Account
 import com.loadingbyte.cinecred.projectio.service.GoogleService
-import com.loadingbyte.cinecred.ui.LocaleWish
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab
 import java.lang.Thread.sleep
 import javax.swing.JTextField
@@ -70,11 +69,6 @@ object GuideProjectFolderAddOnlineAccountDemo : ScreencastDemo("$DIR/add-online-
     override fun generate() {
         addWelcomeWindow(fullscreen = true)
         welcomeFrame.setTab(WelcomeTab.PREFERENCES)
-        welcomeFrame.preferences_start_setUILocaleWish(LocaleWish.System)
-        welcomeFrame.preferences_start_setCheckForUpdates(true)
-        welcomeFrame.preferences_start_setAccounts(emptyList())
-        welcomeFrame.preferences_start_setOverlays(emptyList())
-        welcomeFrame.preferences_start_setDeliveryDestTemplates(emptyList())
 
         sc.hold(2 * hold)
         sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedStartAddAccountButton))

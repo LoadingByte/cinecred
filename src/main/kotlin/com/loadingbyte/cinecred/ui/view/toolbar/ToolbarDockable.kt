@@ -39,11 +39,14 @@ class ToolbarDockable(private val toolbarCtrl: ToolbarCtrlComms, playbackCtrl: P
     @Deprecated("ENCAPSULATION LEAK") val leakedResetStylingButton get() = resetStylingButton
     @Deprecated("ENCAPSULATION LEAK") val leakedGuidesButton get() = guidesToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedOverlaysButton get() = overlaysButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedWindowLayoutsButton get() = windowLayoutsButton
+    @Deprecated("ENCAPSULATION LEAK") val leakedWindowLayoutLockedButton get() = windowLayoutLockedToggleButton
     @Deprecated("ENCAPSULATION LEAK") val leakedPreviewButton get() = dockableToggleButtons[DockableId.PREVIEW]!!
     @Deprecated("ENCAPSULATION LEAK") val leakedLogButton get() = dockableToggleButtons[DockableId.LOG]!!
     @Deprecated("ENCAPSULATION LEAK") val leakedStylingButton get() = dockableToggleButtons[DockableId.STYLING]!!
     @Deprecated("ENCAPSULATION LEAK") val leakedPlaybackButton get() = dockableToggleButtons[DockableId.PLAYBACK]!!
     @Deprecated("ENCAPSULATION LEAK") val leakedDeliveryButton get() = dockableToggleButtons[DockableId.DELIVERY]!!
+    @Deprecated("ENCAPSULATION LEAK") val leakedHomeButton get() = homeButton
     @Deprecated("ENCAPSULATION LEAK") val leakedPlaybackControls get() = playbackControls
     // =========================================
 

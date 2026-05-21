@@ -134,6 +134,24 @@ abstract class ScreencastDemo(
         sleep(500)
     }
 
+    fun updateUndockedDialogs() {
+        sleep(2000)
+        for (dialog in dok.ownedWindows)
+            if (dialog is JDialog && dok.isDockingWindow(dialog) && dialog !in undockedDialogs) {
+                val win = BackedVirtualWindow(dok.ownedWindows.filterIsInstance<JDialog>().first())
+                undockedWins += win
+                undockedDialogs += dialog
+                dt.add(win)
+                dt.coerce(win)
+            }
+        for ((win, dialog) in undockedWins.zip(undockedDialogs))
+            if (!dok.isVisible) {
+                undockedWins -= win
+                undockedDialogs -= dialog
+                dt.remove(win)
+            }
+    }
+
     fun addOptionPaneDialog() {
         sleep(2000)
         optionPaneDialog = Window.getWindows()
@@ -214,6 +232,9 @@ abstract class ScreencastDemo(
     protected val dlvScan get() = dlvDok.leakedConfigForm.leakedScanWidget.components[0] as JComboBox<*>
     protected val dlvPrimaries get() = dlvDok.leakedConfigForm.leakedPrimariesWidget.components[0] as JComboBox<*>
     protected val dlvTransfer get() = dlvDok.leakedConfigForm.leakedTransferWidget.components[0] as JComboBox<*>
+
+    protected var undockedWins: List<BackedVirtualWindow> = emptyList(); private set
+    protected var undockedDialogs: List<JDialog> = emptyList(); private set
 
     protected lateinit var optionPaneWin: BackedVirtualWindow; private set
     protected lateinit var optionPaneDialog: JDialog; private set

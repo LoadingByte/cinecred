@@ -19,8 +19,11 @@ import com.loadingbyte.cinecred.project.Scan
 import com.loadingbyte.cinecred.project.st
 import com.loadingbyte.cinecred.ui.DeliveryDestTemplate
 import com.loadingbyte.cinecred.ui.DeliveryDestTemplate.Placeholder.*
+import com.loadingbyte.cinecred.ui.PresetWindowLayout
 import com.loadingbyte.cinecred.ui.comms.DockableId.*
+import com.loadingbyte.cinecred.ui.comms.WelcomeTab
 import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
+import java.awt.Container
 import java.awt.Dimension
 import java.awt.KeyboardFocusManager
 import java.awt.Point
@@ -47,7 +50,11 @@ val GUIDE_USER_INTERFACE_DEMOS
         GuideUserInterfaceDeckLinkDemo,
         GuideUserInterfaceDeliveryDemo,
         GuideUserInterfaceDeliveryDestTemplateDemo,
-        GuideUserInterfaceWarningsDemo
+        GuideUserInterfaceWarningsDemo,
+        GuideUserInterfaceRearrangePanelsDemo,
+        GuideUserInterfaceRetractWindowDemo,
+        GuideUserInterfaceWindowLayoutsStandardDemo,
+        GuideUserInterfaceWindowLayoutsCustomDemo
     )
 
 
@@ -492,5 +499,161 @@ object GuideUserInterfaceWarningsDemo : ScreencastDemo("$DIR/warnings", Format.P
         sleep(500)
 
         sc.frame()
+    }
+}
+
+
+object GuideUserInterfaceRearrangePanelsDemo : ScreencastDemo(
+    "$DIR/rearrange-panels", Format.VIDEO_GIF, 1100, 700, 0.85
+) {
+    override fun generate() {
+        addProjectWindows(dockedTrees.apply { leaf(LOG).collapsed = true; leaf(DELIVERY).collapsed = false })
+        prjWin.size = prjWin.size.apply { height -= 100 }
+
+        edt { tolDok.leakedGuidesButton.isSelected = false }
+        sleep(500)
+
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedWindowLayoutLockedButton))
+        sc.click()
+        sc.mouseTo(prjWin.desktopPosOf(dok.leakedHeader(DELIVERY.name)))
+        dt.mouseDownAndDrag()
+        sc.hold()
+        sc.mouseTo(prjWin.desktopPosOf(preDok).apply { y += 200 })
+        dt.mouseUp()
+        sleep(500)
+        edt { KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner() }
+        sc.hold(4 * hold)
+
+        sc.mouseTo(prjWin.desktopPosOf(dok.leakedHeader(DELIVERY.name)))
+        dt.mouseDownAndDrag()
+        sc.hold()
+        sc.mouseTo(Point(dt.width / 2, dt.height - 20))
+        dt.mouseUp()
+        updateUndockedDialogs()
+        edt { KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner() }
+        sc.hold(4 * hold)
+
+        sc.mouseTo(undockedWins[0].desktopPosOf(dok.leakedHeader(DELIVERY.name)))
+        dt.mouseDownAndDrag()
+        sc.hold()
+        sc.mouseTo(prjWin.desktopPosOf(styDok).apply { x += 100; y += 200 })
+        dt.mouseUp()
+        updateUndockedDialogs()
+        edt { KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner() }
+        sc.hold(4 * hold)
+    }
+}
+
+
+object GuideUserInterfaceRetractWindowDemo : ScreencastDemo("$DIR/retract-window", Format.VIDEO_GIF, 1100, 500, 0.85) {
+    override fun generate() {
+        addProjectWindows(dockedTrees.apply { leaf(LOG).collapsed = true })
+
+        edt {
+            tolDok.leakedGuidesButton.isSelected = false
+            tolDok.leakedWindowLayoutLockedButton.isSelected = false
+        }
+        sleep(500)
+
+        dt.mouseTo(prjWin.desktopPosOf(tolDok.leakedStylingButton), jump = true)
+        sc.click(2 * hold)
+        sc.click(2 * hold)
+        sc.mouseTo(prjWin.desktopPosOf(dok.leakedRetractableButtons()[1]))
+        sc.click(2 * hold)
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedStylingButton))
+        sc.click()
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedStylingButton))
+        sc.click(2 * hold)
+        sc.mouseTo(prjWin.desktopPosOf(dok.leakedRetractableButtons()[1]))
+        sc.click(2 * hold)
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedStylingButton))
+    }
+}
+
+
+object GuideUserInterfaceWindowLayoutsStandardDemo : ScreencastDemo(
+    "$DIR/window-layouts-standard", Format.VIDEO_GIF, 1100, 550, 0.85
+) {
+    override fun generate() {
+        addProjectWindows(dockedTrees)
+
+        edt {
+            tolDok.leakedGuidesButton.isSelected = false
+        }
+        sleep(500)
+
+        dt.mouseTo(prjWin.desktopPosOf(tolDok.leakedWindowLayoutsButton), jump = true)
+        for (idx in 1 downTo 0) {
+            sc.click()
+            sleep(500)
+            sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = idx))
+            sleep(500)
+            sc.click(0)
+            edt { projectCtrl.windowLayoutTrees = PresetWindowLayout.ALL[idx].trees(dt.fullscreen) }
+            updateUndockedDialogs()
+            sc.hold(4 * hold)
+            sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedWindowLayoutsButton))
+        }
+    }
+}
+
+
+object GuideUserInterfaceWindowLayoutsCustomDemo : ScreencastDemo(
+    "$DIR/window-layouts-custom", Format.VIDEO_GIF, 1100, 550, 0.85
+) {
+    override fun generate() {
+        addProjectWindows(trees(tree(vSplit(TOOLBAR, hSplit(DELIVERY, PREVIEW)))))
+
+        edt {
+            KeyboardFocusManager.getCurrentKeyboardFocusManager().clearFocusOwner()
+            tolDok.leakedGuidesButton.isSelected = false
+            tolDok.leakedWindowLayoutLockedButton.isSelected = false
+        }
+        sleep(500)
+
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedWindowLayoutsButton))
+        sc.click()
+        sleep(500)
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = PresetWindowLayout.ALL.size + 1))
+        sleep(500)
+        sc.click(0)
+        addOptionPaneDialog()
+        sc.hold(2 * hold)
+        val textField = findComboBox(optionPaneDialog.contentPane)!!.editor.editorComponent as JTextField
+        sc.type(optionPaneWin, textField, "Demo")
+        sc.mouseTo(optionPaneWin.desktopPosOf(optionPaneDialog.rootPane.defaultButton))
+        sc.click(0)
+        removeOptionPaneDialog()
+        sc.hold(2 * hold)
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedWindowLayoutsButton))
+        sc.click()
+        sleep(500)
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(idx = PresetWindowLayout.ALL.size), 4 * hold)
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedWindowLayoutsButton))
+        sc.click()
+        sleep(500)
+        sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedHomeButton))
+        sc.click(0)
+        sleep(1000)
+
+        addWelcomeWindow()
+        welcomeWin.size = Dimension(dt.width - 500, dt.height - 100)
+        dt.center(welcomeWin)
+
+        sc.hold(4 * hold)
+        sc.mouseTo(welcomeWin.desktopPosOfTab(welcomeFrame.panel.leakedTabs, WelcomeTab.PREFERENCES.ordinal))
+        sc.click()
+        val btn = welcomeFrame.panel.preferencesPanel.leakedStartWindowLayoutDefaultButton(PresetWindowLayout.ALL.size)
+        sc.mouseTo(welcomeWin.desktopPosOf(btn))
+        sc.click(8 * hold)
+    }
+
+    private fun findComboBox(container: Container): JComboBox<*>? {
+        for (idx in 0..<container.componentCount)
+            when (val component = container.getComponent(idx)) {
+                is JComboBox<*> -> return component
+                is Container -> findComboBox(component)?.let { return it }
+            }
+        return null
     }
 }

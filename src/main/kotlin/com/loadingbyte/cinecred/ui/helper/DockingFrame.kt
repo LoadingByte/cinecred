@@ -26,6 +26,8 @@ class DockingFrame(
 
     // ========== ENCAPSULATION LEAKS ==========
     @Deprecated("ENCAPSULATION LEAK")
+    fun leakedHeader(dockableId: String) = bricks.getValue(dockableId).getComponent(0)!!
+    @Deprecated("ENCAPSULATION LEAK")
     fun leakedRetractableButtons() = layeredPane.getComponentsInLayer(RETRACTABLE_BUTTONS_LAYER)!!
     // =========================================
 

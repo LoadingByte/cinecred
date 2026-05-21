@@ -41,6 +41,9 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
     @Deprecated("ENCAPSULATION LEAK") val leakedCfgTemplateStrWidget
         get() = configureDeliveryDestTemplateForm.templateStrWidget
     @Deprecated("ENCAPSULATION LEAK") val leakedCfgTemplateDoneButton get() = configureDeliveryDestTemplateDoneButton
+    @Deprecated("ENCAPSULATION LEAK")
+    fun leakedStartWindowLayoutDefaultButton(layoutIdx: Int) =
+        (startWindowLayoutsPanel.getComponent(layoutIdx) as JPanel).components.last() as JToggleButton
     // =========================================
 
     val startPreferencesForm: PreferencesForm

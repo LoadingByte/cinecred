@@ -23,6 +23,10 @@ import javax.swing.text.StyleConstants
 
 class WelcomePanel(welcomeCtrl: WelcomeCtrlComms) : JPanel() {
 
+    // ========== ENCAPSULATION LEAKS ==========
+    @Deprecated("ENCAPSULATION LEAK") val leakedTabs: JTabbedPane get() = tabPane
+    // =========================================
+
     val projectsPanel = ProjectsPanel(welcomeCtrl)
     val preferencesPanel = PreferencesPanel(welcomeCtrl)
 

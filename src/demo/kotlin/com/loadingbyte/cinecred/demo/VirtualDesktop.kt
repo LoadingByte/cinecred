@@ -37,6 +37,7 @@ class VirtualDesktop(val width: Int, val height: Int) {
     private var mouseTarget: Point? = null
     private var mouseSpeed = 0.0  // px per second
     private var mousePressed = false
+    private var dragOrigin: VirtualWindow? = null
     private var draggedTransferable: Transferable? = null
     private var draggingFolder: Boolean = false
 
@@ -54,6 +55,14 @@ class VirtualDesktop(val width: Int, val height: Int) {
     fun toBack(window: VirtualWindow) {
         windows.remove(window)
         windows.add(0, window)
+    }
+
+    fun coerce(window: VirtualWindow) {
+        val pos = window.pos
+        var size = window.size
+        size = Dimension(size.width.coerceAtMost(width), size.height.coerceAtMost(height))
+        window.size = size
+        window.pos = Point(pos.x.coerceIn(0, width - size.width), pos.y.coerceIn(0, height - size.height))
     }
 
     fun center(window: VirtualWindow) {
@@ -102,7 +111,9 @@ class VirtualDesktop(val width: Int, val height: Int) {
 
     fun mouseDownAndDrag() {
         mouseDown()
-        draggedTransferable = windowContainingMouse()?.drag(mouse)
+        val window = windowContainingMouse()
+        dragOrigin = window
+        draggedTransferable = window?.drag(mouse)
     }
 
     fun mouseDownAndDragFolder(folder: Path) {
@@ -117,10 +128,11 @@ class VirtualDesktop(val width: Int, val height: Int) {
 
     fun mouseUp() {
         mousePressed = false
-        windowContainingMouse()?.let { window ->
-            window.mousePressOrRelease(mouse, press = false)
+        val window = windowContainingMouse()
+        (dragOrigin ?: window)?.mousePressOrRelease(mouse, press = false)
+        if (window != null)
             draggedTransferable?.let { transferable -> window.drop(mouse, transferable) }
-        }
+        dragOrigin = null
         draggedTransferable = null
         draggingFolder = false
     }
@@ -151,7 +163,10 @@ class VirtualDesktop(val width: Int, val height: Int) {
                     mouse.y + (target.y - mouse.y) * tickDist / remainingDist
                 )
             }
-            windowContainingMouse()?.mouseMove(mouse, mousePressed, dnd = draggedTransferable != null)
+            val window = windowContainingMouse()
+            (dragOrigin ?: window)?.mouseMove(mouse, mousePressed)
+            if (draggedTransferable != null)
+                window?.dnd(mouse)
             draggedWindow?.pos = Point(
                 (mouse.x + draggedWindowOffsetFromMouse.x).roundToInt(),
                 (mouse.y + draggedWindowOffsetFromMouse.y).roundToInt()
@@ -215,7 +230,8 @@ abstract class VirtualWindow {
 
     abstract fun paint(g2: Graphics2D)
     open fun mousePressOrRelease(mouse: Point2D.Double, press: Boolean) {}
-    open fun mouseMove(mouse: Point2D.Double, pressed: Boolean, dnd: Boolean) {}
+    open fun mouseMove(mouse: Point2D.Double, pressed: Boolean) {}
+    open fun dnd(mouse: Point2D.Double) {}
     open fun drag(mouse: Point2D.Double): Transferable? = null
     open fun drop(mouse: Point2D.Double, transferable: Transferable) {}
 
@@ -272,6 +288,7 @@ class BackedVirtualWindow(private val backingWin: Window) : VirtualWindow() {
         private val TITLE_BAR_FOREGROUND = UIManager.getColor("Panel.foreground")
     }
 
+    private var dragOrigin: Window? = null
     private var curDropTarget: DropTarget? = null
 
     override var pos: Point = backingWin.location
@@ -317,36 +334,57 @@ class BackedVirtualWindow(private val backingWin: Window) : VirtualWindow() {
     }
 
     override fun mousePressOrRelease(mouse: Point2D.Double, press: Boolean) {
-        val (win, x, y) = awtWinContaining(mouse) ?: return
-        val ids = if (press) intArrayOf(MOUSE_PRESSED) else intArrayOf(MOUSE_RELEASED, MOUSE_CLICKED)
-        edt { for (id in ids) win.dispatchEvent(MouseEvent(win, id, 0, 0, x, y, 1, false, BUTTON1)) }
+        val win = dragOrigin ?: awtWinContaining(mouse) ?: return
+        val (x, y) = relativeMouse(mouse, win)
+        edt {
+            @Suppress("DEPRECATION")
+            when {
+                press ->
+                    win.dispatchEvent(MouseEvent(win, MOUSE_PRESSED, 0, BUTTON1_DOWN_MASK, x, y, 1, false, BUTTON1))
+                dragOrigin != null ->
+                    win.dispatchEvent(MouseEvent(win, MOUSE_RELEASED, 0, BUTTON1_MASK, x, y, 0, false, BUTTON1))
+                else -> {
+                    win.dispatchEvent(MouseEvent(win, MOUSE_RELEASED, 0, BUTTON1_MASK, x, y, 1, false, BUTTON1))
+                    win.dispatchEvent(MouseEvent(win, MOUSE_CLICKED, 0, BUTTON1_MASK, x, y, 1, false, BUTTON1))
+                }
+            }
+        }
+        if (!press)
+            dragOrigin = null
     }
 
-    override fun mouseMove(mouse: Point2D.Double, pressed: Boolean, dnd: Boolean) {
-        val (win, x, y) = awtWinContaining(mouse) ?: return
+    override fun mouseMove(mouse: Point2D.Double, pressed: Boolean) {
+        val win = dragOrigin ?: awtWinContaining(mouse) ?: return
+        val (x, y) = relativeMouse(mouse, win)
         edt {
-            win.dispatchEvent(MouseEvent(win, MOUSE_MOVED, 0, 0, x, y, 0, false))
             if (pressed)
                 win.dispatchEvent(MouseEvent(win, MOUSE_DRAGGED, 0, BUTTON1_DOWN_MASK, x, y, 0, false))
+            else
+                win.dispatchEvent(MouseEvent(win, MOUSE_MOVED, 0, 0, x, y, 0, false))
         }
-        if (dnd) {
-            val newComp = deepestCompWithTransferHandler(win, x, y)
-            val newDT = newComp?.dropTarget
-            val curDT = curDropTarget
-            curDropTarget = newDT
-            if (curDT != null && curDT != newDT)
-                curDT.dragExit(DropTargetEvent(curDT.dropTargetContext))
-            if (newDT != null) {
-                val e = DropTargetDragEvent(newDT.dropTargetContext, Point(x - newComp.x, y - newComp.y), MOVE, MOVE)
-                if (curDT != newDT)
-                    newDT.dragEnter(e)
-                newDT.dragOver(e)
-            }
+    }
+
+    override fun dnd(mouse: Point2D.Double) {
+        val win = awtWinContaining(mouse) ?: return
+        val (x, y) = relativeMouse(mouse, win)
+        val newComp = deepestCompWithTransferHandler(win, x, y)
+        val newDT = newComp?.dropTarget
+        val curDT = curDropTarget
+        curDropTarget = newDT
+        if (curDT != null && curDT != newDT)
+            curDT.dragExit(DropTargetEvent(curDT.dropTargetContext))
+        if (newDT != null) {
+            val e = DropTargetDragEvent(newDT.dropTargetContext, Point(x - newComp.x, y - newComp.y), MOVE, MOVE)
+            if (curDT != newDT)
+                newDT.dragEnter(e)
+            newDT.dragOver(e)
         }
     }
 
     override fun drag(mouse: Point2D.Double): Transferable? {
-        val (win, x, y) = awtWinContaining(mouse) ?: return null
+        val win = awtWinContaining(mouse) ?: return null
+        val (x, y) = relativeMouse(mouse, win)
+        dragOrigin = win
         val comp = deepestCompWithTransferHandler(win, x, y) ?: return null
         val clip = Clipboard("")
         edt { comp.transferHandler.exportToClipboard(comp, clip, MOVE) }
@@ -354,7 +392,8 @@ class BackedVirtualWindow(private val backingWin: Window) : VirtualWindow() {
     }
 
     override fun drop(mouse: Point2D.Double, transferable: Transferable) {
-        val (win, x, y) = awtWinContaining(mouse) ?: return
+        val win = awtWinContaining(mouse) ?: return
+        val (x, y) = relativeMouse(mouse, win)
         val comp = deepestCompWithTransferHandler(win, x, y) ?: return
         val dt = comp.dropTarget
         val ts = TransferHandler.TransferSupport(comp, transferable)
@@ -377,26 +416,35 @@ class BackedVirtualWindow(private val backingWin: Window) : VirtualWindow() {
         return null
     }
 
-    private data class WinAndRelMouse(val win: Window, val relMouseX: Int, val relMouseY: Int)
-
-    private fun awtWinContaining(mouse: Point2D.Double): WinAndRelMouse? {
+    private fun awtWinContaining(mouse: Point2D.Double): Window? {
         forEachVisiblePopupOf(backingWin) { popup ->
             val vWinPos = desktopPosOf(popup, center = false)
             if (mouse.x.toInt() - vWinPos.x in 0..popup.width && mouse.y.toInt() - vWinPos.y in 0..popup.height)
-                return WinAndRelMouse(popup, mouse.x.toInt() - vWinPos.x, mouse.y.toInt() - vWinPos.y)
+                return popup
         }
         if (backingWin.isVisible) {
             val winInsets = windowMarginPlusPadding
             if (mouse.x.toInt() - pos.x - INSET_L in 0..backingWin.width - winInsets.left - winInsets.right &&
                 mouse.y.toInt() - pos.y - INSET_T in 0..backingWin.height - winInsets.top - winInsets.bottom
-            ) {
-                val x = mouse.x.toInt() - pos.x - INSET_L + winInsets.left
-                val y = mouse.y.toInt() - pos.y - INSET_T + winInsets.top
-                return WinAndRelMouse(backingWin, x, y)
-            }
+            )
+                return backingWin
         }
         return null
     }
+
+    private data class XY(val x: Int, val y: Int)
+
+    private fun relativeMouse(mouse: Point2D.Double, win: Window): XY =
+        if (win != backingWin) {
+            val vWinPos = desktopPosOf(win, center = false)
+            XY(mouse.x.toInt() - vWinPos.x, mouse.y.toInt() - vWinPos.y)
+        } else {
+            val winInsets = windowMarginPlusPadding
+            XY(
+                mouse.x.toInt() - pos.x - INSET_L + winInsets.left,
+                mouse.y.toInt() - pos.y - INSET_T + winInsets.top
+            )
+        }
 
     /** Obtains virtual desktop coordinates for the given component, assuming that it is inside this window. */
     fun desktopPosOf(comp: Component, center: Boolean = true): Point {

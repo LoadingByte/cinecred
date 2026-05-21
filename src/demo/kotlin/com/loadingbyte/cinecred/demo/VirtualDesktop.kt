@@ -3,8 +3,8 @@ package com.loadingbyte.cinecred.demo
 import com.loadingbyte.cinecred.common.sumBetween
 import com.loadingbyte.cinecred.project.Style
 import com.loadingbyte.cinecred.project.StyleSetting
-import com.loadingbyte.cinecred.projectio.CsvFormat
 import com.loadingbyte.cinecred.projectio.Spreadsheet
+import com.loadingbyte.cinecred.projectio.SpreadsheetFormat
 import com.loadingbyte.cinecred.projectio.SpreadsheetLook
 import com.loadingbyte.cinecred.ui.helper.*
 import com.loadingbyte.cinecred.ui.styling.StyleForm
@@ -652,7 +652,11 @@ class FileBrowserVirtualWindow : FakeVirtualWindow() {
 }
 
 
-class SpreadsheetEditorVirtualWindow(private val file: Path, skipRows: Int = 0) : FakeVirtualWindow() {
+class SpreadsheetEditorVirtualWindow(
+    private val file: Path,
+    private val format: SpreadsheetFormat,
+    skipRows: Int = 0
+) : FakeVirtualWindow() {
 
     companion object {
         private const val ROW_HEIGHT = 20
@@ -662,7 +666,7 @@ class SpreadsheetEditorVirtualWindow(private val file: Path, skipRows: Int = 0) 
 
     override val title = "${file.name} \u2013 " + l10nDemo("screencast.spreadsheetEditor.title")
 
-    val matrix = CsvFormat.read(file, "").first.single().drop(skipRows).map { it.cells.toMutableList() }
+    val matrix = format.read(file, "").first.single().drop(skipRows).map { it.cells.toMutableList() }
     var rowOffset = 0
     var colWidths = intArrayOf()
 
@@ -743,7 +747,7 @@ class SpreadsheetEditorVirtualWindow(private val file: Path, skipRows: Int = 0) 
     )
 
     fun save() {
-        CsvFormat.write(file, Spreadsheet("", matrix), SpreadsheetLook(emptyMap(), emptyList()))
+        format.write(file, Spreadsheet("", matrix), SpreadsheetLook(emptyMap(), emptyList()))
     }
 
     private fun cellX(colIdx: Int) = INSET_L + colIdx * SEP_THICKNESS + colWidths.sumBetween(0, colIdx)

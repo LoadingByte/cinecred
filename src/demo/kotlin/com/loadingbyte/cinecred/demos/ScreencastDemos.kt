@@ -7,7 +7,9 @@ import com.loadingbyte.cinecred.demo.ScreencastDemo
 import com.loadingbyte.cinecred.demo.SpreadsheetEditorVirtualWindow
 import com.loadingbyte.cinecred.demo.edt
 import com.loadingbyte.cinecred.project.*
-import com.loadingbyte.cinecred.projectio.CsvFormat
+import com.loadingbyte.cinecred.projectio.Spreadsheet
+import com.loadingbyte.cinecred.projectio.SpreadsheetLook
+import com.loadingbyte.cinecred.projectio.XlsxFormat
 import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
 import kotlinx.collections.immutable.persistentListOf
 import java.awt.Dimension
@@ -15,7 +17,9 @@ import java.awt.KeyboardFocusManager
 import java.awt.Point
 import java.lang.Thread.sleep
 import java.text.NumberFormat
-import kotlin.io.path.*
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.name
+import kotlin.io.path.pathString
 
 
 private const val DIR = "screencast"
@@ -42,8 +46,7 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.hold()
         sc.caption("screencast.caption.create.config")
         sc.mouseTo(welcomeWin.desktopPosOf(projectsPanel.leakedCreCfgFormatWidget.components[0]))
-        sc.click()
-        sc.mouseTo(welcomeWin.desktopPosOfDropdownItem(CsvFormat))
+        sc.click(4 * hold)
         sc.click()
         sc.caption("screencast.caption.create.exec")
         sc.mouseTo(welcomeWin.desktopPosOf(projectsPanel.leakedCreCfgDoneButton))
@@ -55,19 +58,20 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sleep(5000)
 
         addProjectWindows(styWinSplitRatio = 0.225)
-        val creditsFile = projectDir.resolve("${projectDir.name}.csv")
+        val creditsFile = projectDir.resolve("${projectDir.name}.xlsx")
         val picLineIdx: Int
         run {
-            val lines = creditsFile.readLines().toMutableList()
-            lines.subList(0, lines.indexOfFirst { it.startsWith("@") }).clear()
+            val sheet = XlsxFormat.read(creditsFile, "").first.single()
+            val matrix = sheet.mapTo(mutableListOf(), Spreadsheet.Record::cells)
+            matrix.removeAt(0)
             val kw = l10n("projectIO.credits.table.pic")
-            val indices = lines.withIndex().filter { "{{$kw" in it.value }.map { it.index }
+            val indices = matrix.withIndex().filter { (_, cells) -> cells.any { "{{$kw" in it } }.map { (i, _) -> i }
             check(indices.isNotEmpty()) { "Expected there to be at least one picture." }
             check(indices.zipWithNext(Int::minus).all { it == -1 }) { "Expected all pictures to be in one cluster." }
             picLineIdx = indices.first()
-            lines[picLineIdx] = lines[picLineIdx].replace(Regex("\\{\\{$kw.*}}"), "TODO: LOGO")
-            lines.subList(picLineIdx + 1, indices.last() + 1).clear()
-            creditsFile.writeLines(lines)
+            matrix[picLineIdx] = matrix[picLineIdx].map { cell -> cell.replace(Regex("\\{\\{$kw.*}}"), "TODO: LOGO") }
+            matrix.subList(picLineIdx + 1, indices.last() + 1).clear()
+            XlsxFormat.write(creditsFile, Spreadsheet(sheet.name, matrix), SpreadsheetLook(emptyMap(), emptyList()))
         }
         edt {
             val newStyling = projectCtrl.stylingHistory.current.copy(pictureStyles = persistentListOf())
@@ -136,11 +140,11 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.caption("screencast.caption.files.list1")
         sc.caption("screencast.caption.files.list2")
         sc.caption("screencast.caption.files.credits")
-        sc.mouseTo(fileBrowserWin.desktopPosOfFile("${projectDir.name}.csv"))
-        fileBrowserWin.selectedFileName = "${projectDir.name}.csv"
+        sc.mouseTo(fileBrowserWin.desktopPosOfFile("${projectDir.name}.xlsx"))
+        fileBrowserWin.selectedFileName = "${projectDir.name}.xlsx"
         sc.hold()
 
-        val spreadsheetEditorWin = SpreadsheetEditorVirtualWindow(creditsFile).apply {
+        val spreadsheetEditorWin = SpreadsheetEditorVirtualWindow(creditsFile, XlsxFormat).apply {
             size = Dimension(800, 500)
             colWidths = intArrayOf(160, 160, 50, 80, 110, 50, 80, 80, 80, 80)
         }

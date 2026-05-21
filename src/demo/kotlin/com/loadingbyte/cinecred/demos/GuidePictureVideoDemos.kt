@@ -8,6 +8,7 @@ import com.loadingbyte.cinecred.demo.*
 import com.loadingbyte.cinecred.imaging.Picture
 import com.loadingbyte.cinecred.imaging.Tape
 import com.loadingbyte.cinecred.project.*
+import com.loadingbyte.cinecred.projectio.CsvFormat
 import com.loadingbyte.cinecred.ui.comms.DockableId.LOG
 import com.loadingbyte.cinecred.ui.comms.DockableId.STYLING
 import kotlinx.collections.immutable.persistentListOf
@@ -79,7 +80,7 @@ object GuidePictureVideoAutoAddDemo : ScreencastDemo("$DIR/auto-add", Format.VID
         }
         sleep(500)
 
-        val spreadsheetEditorWin = SpreadsheetEditorVirtualWindow(creditsFile, skipRows = 1).apply {
+        val spreadsheetEditorWin = SpreadsheetEditorVirtualWindow(creditsFile, CsvFormat, skipRows = 1).apply {
             size = Dimension(600, 350)
             colWidths = intArrayOf(100, 200, 50, 100, 100, 50, 50, 50, 50, 50)
         }

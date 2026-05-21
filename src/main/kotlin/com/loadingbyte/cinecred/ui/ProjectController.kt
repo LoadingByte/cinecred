@@ -245,10 +245,9 @@ class ProjectController(
                 tapes::get
             )?.let { styling = styling.copy(tapeStyles = it) }
 
-            // The following verification needs tape metadata. To avoid the verifier sequentially loading one tape after
-            // the other, we load all of them in parallel in advance.
-            for (style in styling.tapeStyles)
-                style.tape.tape?.loadMetadataInBackground()
+            // The following verification needs picture and tape metadata. To avoid the verifier sequentially loading
+            // one after the other, we load all of them in parallel in advance.
+            loadMediaInBackground(styling)
 
             // If the styling is erroneous, abort and notify the UI about the error.
             val earlyConstraintViolations = verifyConstraints(styling)
@@ -280,14 +279,13 @@ class ProjectController(
                 CreditsBook(creditsWorkbook.fileName, creditsWorkbook.uri, credits.toPersistentList())
             }
 
-            val usedStyles = findUsedStyles(creditsBooks.flatMap(CreditsBook::credits))
-
             // The styling may be updated depending on the credits spreadsheet, namely in the following cases:
             //   - If the sheet refers to a new picture/tape style, automatically add it.
             //   - If the sheet no longer references an automatically added picture/tape style, remove it.
             //   - If a page style has legacy settings which were not used to produce a migration message, clear them.
             //     But only if there is at least one valid credits sequence, to not prematurely clear legacy settings
             //     while, e.g., waiting for an online service.
+            val usedStyles = findUsedStyles(creditsBooks.flatMap(CreditsBook::credits))
             addRemovePopupStyles(styling.pictureStyles, usedStyles)?.let { styling = styling.copy(pictureStyles = it) }
             addRemovePopupStyles(styling.tapeStyles, usedStyles)?.let { styling = styling.copy(tapeStyles = it) }
             if (creditsBooks.any { creditsBook -> creditsBook.credits.isNotEmpty() })
@@ -306,12 +304,9 @@ class ProjectController(
             // need to know the width and height. However, if we lazily loaded those files only once encountering them,
             // we'd load them sequentially. This can take a very long time if many such files are used. To avoid this,
             // we now trigger the loading of all files in parallel background threads.
-            for (style in usedStyles)
-                when (style) {
-                    is PictureStyle -> style.picture.loader?.loadInBackground()
-                    is TapeStyle -> style.tape.tape?.loadMetadataInBackground()
-                    is PageStyle, is ContentStyle, is LetterStyle, is TransitionStyle -> {}
-                }
+            // Even though we already called this method before, we need to call it again because the styling might have
+            // changed, e.g., with newly added popup styles.
+            loadMediaInBackground(styling)
 
             // Draw pages and video for each credits spreadsheet.
             val crushingStyles = HashMap<Style, MutableList<CreditsId>>()
@@ -398,6 +393,13 @@ class ProjectController(
             }
         }
         return updatedStyles?.toPersistentList()
+    }
+
+    private fun loadMediaInBackground(styling: Styling) {
+        for (style in styling.pictureStyles)
+            style.picture.loader?.loadInBackground()
+        for (style in styling.tapeStyles)
+            style.tape.tape?.loadMetadataInBackground()
     }
 
     private inline fun <reified S : PopupStyle> addRemovePopupStyles(

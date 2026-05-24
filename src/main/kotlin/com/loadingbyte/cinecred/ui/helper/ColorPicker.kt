@@ -18,7 +18,6 @@ import java.awt.image.DirectColorModel
 import java.awt.image.Raster
 import java.text.ParseException
 import javax.swing.*
-import javax.swing.JSpinner.NumberEditor
 import javax.swing.event.ChangeEvent
 import javax.swing.event.ChangeListener
 import javax.swing.text.DefaultFormatter
@@ -34,13 +33,15 @@ class ColorPicker(allowNonSRGB: Boolean, private val allowAlpha: Boolean) : JCom
 
     private val hexTextField = makeHexTextField()
 
-    private val hueSpinner = makeSpinner(SpinnerNumberModel(0f, 0f, 360f, 1f), ::onHueSatChange)
-    private val satSpinner = makeSpinner(SpinnerNumberModel(0f, 0f, 1f, 0.01f), ::onHueSatChange)
-    private val briSpinner = makeSpinner(SpinnerNumberModel(0f, 0f, 1f, 0.01f), ::onBriChange)
+    private val hueScrubber = makeScrubber(360f, ::onHueSatChange)
+    private val satScrubber = makeScrubber(1f, ::onHueSatChange)
+    private val briScrubber = makeScrubber(1f, ::onBriChange)
 
-    private val redSpinner = makeSpinner(SpinnerNumberModel(0f, 0f, 1f, 0.01f), ::onRGBChange)
-    private val grnSpinner = makeSpinner(SpinnerNumberModel(0f, 0f, 1f, 0.01f), ::onRGBChange)
-    private val bluSpinner = makeSpinner(SpinnerNumberModel(0f, 0f, 1f, 0.01f), ::onRGBChange)
+    private val redScrubber = makeScrubber(1f, ::onRGBChange)
+    private val grnScrubber = makeScrubber(1f, ::onRGBChange)
+    private val bluScrubber = makeScrubber(1f, ::onRGBChange)
+
+    private val alphaScrubber = makeScrubber(1f, ::onAlphaChange)
 
     private val priList = makeList(ColorSpace.Primaries.COMMON.toTypedArray(), ::onPriTrcChange)
     private val trcList = makeList(ColorSpace.Transfer.COMMON.toTypedArray(), ::onPriTrcChange)
@@ -49,14 +50,11 @@ class ColorPicker(allowNonSRGB: Boolean, private val allowAlpha: Boolean) : JCom
         addActionListener { onHDRChange() }
     }
 
-    private val alphaSlider = JSlider(0, 1000, 0).apply { addChangeListener { onAlphaChange(true) } }
-    private val alphaSpinner = makeSpinner(SpinnerNumberModel(0f, 0f, 1f, 0.01f)) { onAlphaChange(false) }
-
-    private fun makeSpinner(model: SpinnerNumberModel, onChange: () -> Unit) =
-        JSpinner(model).apply {
-            editor = (NumberEditor(this, if (model.stepSize.toFloat() < 1f) "#.###" else "#.#"))
-                .also { setCommitsOnValidEdit(it.textField) }
-            addChangeListener { onChange() }
+    private fun makeScrubber(max: Float, onChange: () -> Unit) =
+        Scrubber(Scrubber.NumericScheme(Float::class.javaObjectType, precision = if (max <= 1f) 3 else 1)).apply {
+            limiter = Scrubber.NumberLimiter(0f, max)
+            sensitivity = max / 200.0
+            addValueListener { onChange() }
         }
 
     private fun <E> makeList(items: Array<E>, onChange: () -> Unit) =
@@ -80,59 +78,53 @@ class ColorPicker(allowNonSRGB: Boolean, private val allowAlpha: Boolean) : JCom
         layout = MigLayout(
             "wrap",
             "[][]unrel[right][fill]" + if (allowNonSRGB) "unrel[]" else "",
-            "[]8[]unrel[][][]unrel[][][top]" + if (allowAlpha) "unrel[]" else ""
+            "[]8[]unrel[][][]unrel[][][]" + if (allowAlpha) "unrel[top]" else ""
         )
         add(JLabel(l10n("ui.form.colorSwatches")), "spanx, split 2")
         add(swatches, "growx")
-        add(hueSatDiagram, "spany 7, growy, width 220")
-        add(briDiagram, "spany 7, growy, width 24")
+        add(hueSatDiagram, "spany 8, growy, width 220")
+        add(briDiagram, "spany 8, growy, width 24")
         add(JLabel("sRGB"))
         add(hexTextField)
         if (allowNonSRGB) {
-            add(JLabel(l10n("gamut")), "spany 7, split 5, flowy, center")
+            add(JLabel(l10n("gamut")), "spany 8, split 5, flowy, center")
             add(priList, "growx, gaptop 2")
             add(JLabel("EOTF"), "center")
             add(trcList, "growx, gaptop 2")
             add(hdrButton, "growx")
         }
         add(JLabel(l10n("ui.form.colorHue")).apply { toolTipText = l10n("ui.form.colorHueTooltip") })
-        add(hueSpinner)
+        add(hueScrubber)
         add(JLabel(l10n("ui.form.colorSaturation")).apply { toolTipText = l10n("ui.form.colorSaturationTooltip") })
-        add(satSpinner)
+        add(satScrubber)
         add(JLabel(l10n("ui.form.colorBrightness")).apply { toolTipText = l10n("ui.form.colorBrightnessTooltip") })
-        add(briSpinner)
+        add(briScrubber)
         add(JLabel(l10n("ui.form.colorRed")))
-        add(redSpinner)
+        add(redScrubber)
         add(JLabel(l10n("ui.form.colorGreen")))
-        add(grnSpinner)
+        add(grnScrubber)
         add(JLabel(l10n("ui.form.colorBlue")))
-        add(bluSpinner)
+        add(bluScrubber)
         if (allowAlpha) {
-            add(JLabel(l10n("ui.form.colorAlpha")), "spanx 3, split 2")
-            add(alphaSlider, "width 0, growx")
-            add(alphaSpinner)
+            add(JLabel(l10n("ui.form.colorAlpha").apply { toolTipText = l10n("ui.form.colorAlphaTooltip") }))
+            add(alphaScrubber)
         }
     }
 
     // @formatter:off
-    private var hue: Float get() = hueSpinner.value as Float / 360f; set(v) { hueSpinner.value = v * 360f }
-    private var sat: Float get() = satSpinner.value as Float; set(v) { satSpinner.value = v }
-    private var bri: Float get() = briSpinner.value as Float; set(v) { briSpinner.value = v }
+    private var hue: Float get() = hueScrubber.value / 360f; set(v) { hueScrubber.value = v * 360f }
+    private var sat: Float get() = satScrubber.value; set(v) { satScrubber.value = v }
+    private var bri: Float get() = briScrubber.value; set(v) { briScrubber.value = v }
 
-    private var red: Float get() = redSpinner.value as Float; set(v) { redSpinner.value = v }
-    private var grn: Float get() = grnSpinner.value as Float; set(v) { grnSpinner.value = v }
-    private var blu: Float get() = bluSpinner.value as Float; set(v) { bluSpinner.value = v }
+    private var red: Float get() = redScrubber.value; set(v) { redScrubber.value = v }
+    private var grn: Float get() = grnScrubber.value; set(v) { grnScrubber.value = v }
+    private var blu: Float get() = bluScrubber.value; set(v) { bluScrubber.value = v }
+
+    private var alpha: Float get() = alphaScrubber.value; set(v) { alphaScrubber.value = v }
 
     private val colorSpace: ColorSpace get() = ColorSpace.of(priList.selectedValue, trcList.selectedValue)
     private val hdr: Boolean get() = hdrButton.isSelected
     // @formatter:on
-
-    private var alpha: Float
-        get() = alphaSpinner.value as Float
-        set(v) {
-            alphaSpinner.value = v
-            alphaSlider.value = (v * alphaSlider.maximum).roundToInt()
-        }
 
     private fun updateHSBFromRGB() {
         val (hue, sat, bri) = Color4f(red, grn, blu, 1f, colorSpace).toHSB()
@@ -236,10 +228,10 @@ class ColorPicker(allowNonSRGB: Boolean, private val allowAlpha: Boolean) : JCom
         if (disableOnChange) return
         val max = if (hdr) null else 1f
         withoutOnChange {
-            (briSpinner.model as SpinnerNumberModel).maximum = max
-            (redSpinner.model as SpinnerNumberModel).maximum = max
-            (grnSpinner.model as SpinnerNumberModel).maximum = max
-            (bluSpinner.model as SpinnerNumberModel).maximum = max
+            briScrubber.limiter = Scrubber.NumberLimiter(0f, max)
+            redScrubber.limiter = Scrubber.NumberLimiter(0f, max)
+            grnScrubber.limiter = Scrubber.NumberLimiter(0f, max)
+            bluScrubber.limiter = Scrubber.NumberLimiter(0f, max)
         }
         withoutOnChange {
             updateRGBFromColor(Color4f(red, grn, blu, colorSpace), useAlpha = false)  // clamps the color
@@ -252,15 +244,8 @@ class ColorPicker(allowNonSRGB: Boolean, private val allowAlpha: Boolean) : JCom
         fireStateChanged()
     }
 
-    private fun onAlphaChange(slider: Boolean) {
+    private fun onAlphaChange() {
         if (disableOnChange) return
-        withoutOnChange {
-            if (slider)
-                alphaSpinner.value = alphaSlider.value / alphaSlider.maximum.toFloat()
-            else
-                alphaSlider.value = ((alphaSpinner.value as Float) * alphaSlider.maximum).roundToInt()
-            updateHexFromRGB()
-        }
         cached = null
         fireStateChanged()
     }
@@ -332,18 +317,18 @@ class ColorPicker(allowNonSRGB: Boolean, private val allowAlpha: Boolean) : JCom
         // When the color picker is part of a popup that is closed while an invalid value is entered into a text field,
         // that value will persist once the popup is re-opened. To fix that, we force all text fields to update.
         withoutOnChange {
-            resetSpinner(hueSpinner)
-            resetSpinner(satSpinner)
-            resetSpinner(briSpinner)
-            resetSpinner(redSpinner)
-            resetSpinner(grnSpinner)
-            resetSpinner(bluSpinner)
+            resetScrubber(hueScrubber)
+            resetScrubber(satScrubber)
+            resetScrubber(briScrubber)
+            resetScrubber(redScrubber)
+            resetScrubber(grnScrubber)
+            resetScrubber(bluScrubber)
             hexTextField.value = hexTextField.value
         }
     }
 
-    private fun resetSpinner(spinner: JSpinner) {
-        (spinner.editor as NumberEditor).textField.apply { value = value }
+    private fun resetScrubber(scrubber: Scrubber<Float>) {
+        scrubber.value = scrubber.value
     }
 
     private fun fireStateChanged() {

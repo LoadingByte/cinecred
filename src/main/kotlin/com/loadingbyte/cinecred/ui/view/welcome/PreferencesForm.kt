@@ -6,7 +6,6 @@ import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.comms.WelcomeCtrlComms
 import com.loadingbyte.cinecred.ui.helper.*
 import java.util.*
-import javax.swing.SpinnerNumberModel
 
 
 class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
@@ -54,7 +53,10 @@ class PreferencesForm(private val welcomeCtrl: WelcomeCtrlComms) :
 
     private val tapePreviewResolutionWidget = addWidget(
         l10n("ui.preferences.tapePreviewResolution"),
-        SpinnerWidget(Int::class.javaObjectType, SpinnerNumberModel(64, 64, 1024, 10), widthSpec = WidthSpec.LITTLE),
+        ScrubberWidget(
+            Scrubber.NumericScheme(Int::class.javaObjectType, unit = "px"), Scrubber.NumberLimiter(64, 1024),
+            sensitivity = 1.0, widthSpec = WidthSpec.LITTLE
+        ),
         description = l10n("ui.preferences.tapePreviewResolution.desc")
     )
 

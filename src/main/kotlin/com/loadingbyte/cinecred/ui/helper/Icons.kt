@@ -12,10 +12,7 @@ import com.loadingbyte.cinecred.projectio.service.EtherCalcService
 import com.loadingbyte.cinecred.projectio.service.GoogleService
 import com.loadingbyte.cinecred.projectio.service.Service
 import com.loadingbyte.cinecred.ui.comms.DockableId
-import java.awt.Color
-import java.awt.Component
-import java.awt.Graphics2D
-import java.awt.Paint
+import java.awt.*
 import java.awt.image.BufferedImage
 import java.awt.image.RGBImageFilter
 import javax.swing.Icon
@@ -29,15 +26,10 @@ const val ICON_ICON_GAP = 4
 
 
 val WINDOW_ICON = SVGIcon.load("/logo.svg")
-val WINDOW_ICON_IMAGES = run {
-    listOf(16, 20, 24, 32, 40, 48, 64, 128, 256).map { size ->
-        BufferedImage(size, size, BufferedImage.TYPE_4BYTE_ABGR).withG2 { g2 ->
-            g2.setHighQuality()
-            g2.scale(size / WINDOW_ICON.iconWidth.toDouble())
-            WINDOW_ICON.paintIcon(null, g2, 0, 0)
-        }
-    }
-}
+val WINDOW_ICON_IMAGES = listOf(16, 20, 24, 32, 40, 48, 64, 128, 256).map { size -> WINDOW_ICON.renderIcon(size, size) }
+
+
+val SCRUB_CURSOR = SVGIcon.load("/icons/scrub.svg").createCursor(16, 7, "scrub")
 
 
 val X_1_TO_1_ICON = SVGIcon.load("/icons/1to1.svg")
@@ -628,6 +620,19 @@ class SVGIcon private constructor(
         if (recolor != null)
             effG2 = RecoloredGraphics2D(effG2, recolor)
         paintTo(effG2)
+    }
+
+    fun renderIcon(width: Int, height: Int): BufferedImage =
+        BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR).withG2 { g2 ->
+            g2.setHighQuality()
+            g2.scale(width / this.width.toDouble(), height / this.height.toDouble())
+            paintIcon(null, g2)
+        }
+
+    fun createCursor(hotX: Int, hotY: Int, name: String): Cursor {
+        val d = Toolkit.getDefaultToolkit().getBestCursorSize(width, height)
+        val hotSpot = Point(hotX * d.width / width, hotY * d.height / height)
+        return Toolkit.getDefaultToolkit().createCustomCursor(renderIcon(d.width, d.height), hotSpot, name)
     }
 
     override fun getDisabledIcon() = SVGIcon(svg, xScaling, yScaling, rotation, recolor, isDisabled = true)

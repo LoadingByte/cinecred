@@ -9,6 +9,7 @@ import com.loadingbyte.cinecred.ui.*
 import com.loadingbyte.cinecred.ui.ctrl.MasterCtrl
 import com.loadingbyte.cinecred.ui.ctrl.WelcomeCtrl
 import com.loadingbyte.cinecred.ui.helper.DockingFrame
+import com.loadingbyte.cinecred.ui.helper.Scrubber
 import com.loadingbyte.cinecred.ui.helper.setExtraSystemScaleFactor
 import com.loadingbyte.cinecred.ui.helper.withG2
 import com.loadingbyte.cinecred.ui.styling.StyleForm
@@ -201,11 +202,8 @@ abstract class ScreencastDemo(
 
     protected val styIncUnitVGap
         get() = styGlobForm.getWidgetFor(Global::unitVGapPx.st()).components[0].getComponent(0)!!
-    protected val styRuntime get() = styGlobForm.getWidgetFor(Global::runtimeFrames.st()).components[1] as JSpinner
-    protected val styDecRuntime get() = styRuntime.getComponent(1)!!
-    protected val styGridCols get() = styContForm.getWidgetFor(ContentStyle::gridCols.st()).components[0] as JSpinner
-    protected val styIncGridCols get() = styGridCols.getComponent(0)!!
-    protected val styDecGridCols get() = styGridCols.getComponent(1)!!
+    protected val styRuntime get() = styGlobForm.getWidgetFor(Global::runtimeFrames.st()).components[0] as Scrubber<*>
+    protected val styGridCols get() = styContForm.getWidgetFor(ContentStyle::gridCols.st()).components[0] as Scrubber<*>
     protected val styFlowSep
         get() = styContForm.getWidgetFor(ContentStyle::flowSeparator.st()).components[0] as JTextComponent
     protected val styLetrFormScrollBar get() = (styLetrForm.parent.parent as JScrollPane).verticalScrollBar
@@ -214,8 +212,7 @@ abstract class ScreencastDemo(
     protected val styLayrList
         get() = styLetrForm.getWidgetFor(LetterStyle::layers.st()).components[0] as JPanel
     protected val styPicHeight
-        get() = ((styPictForm.getWidgetFor(PictureStyle::heightPx.st()).components[1] as JSpinner).editor
-                as JSpinner.NumberEditor).textField
+        get() = styPictForm.getWidgetFor(PictureStyle::heightPx.st()).components[1] as Scrubber<*>
 
     protected fun styLayrAddBtn(i: Int) = styLayrList.let { it.getComponent(it.componentCount - 1 - 2 * i) } as JButton
     protected fun styLayrPnl(i: Int) = styLayrList.let { it.getComponent(it.componentCount - 2 - 2 * i) } as JPanel

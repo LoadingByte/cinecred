@@ -10,7 +10,6 @@ import kotlinx.collections.immutable.toPersistentList
 import java.util.*
 import javax.swing.Icon
 import javax.swing.JLabel
-import javax.swing.SpinnerNumberModel
 
 
 class StyleForm<S : Style>(
@@ -56,17 +55,15 @@ class StyleForm<S : Style>(
             is LayerListWidget<*, *> -> addWholeWidthWidget(valueWidget)
             else -> {
                 var label: String? = null
-                var unit: String? = null
                 var desc: String? = null
                 for (widgetSpec in getStyleWidgetSpecs(styleClass))
                     if (widgetSpec is LabelWidgetSpec && setting in widgetSpec.settings) {
                         label = label ?: widgetSpec.label ?: widgetSpec.labelL10nKey?.let(::l10n)
                         desc = desc ?: widgetSpec.descL10nKey?.let(::l10n)
-                    } else if (widgetSpec is UnitWidgetSpec && setting in widgetSpec.settings)
-                        unit = unit ?: widgetSpec.unit
+                    }
                 label = label ?: l10n(l10nKey(setting.name))
                 desc = desc ?: desc(setting.name)
-                val formRow = makeFormRow(label, unit, desc, valueWidget)
+                val formRow = makeFormRow(label, desc, valueWidget)
                 rootFormRows.add(Pair(formRow, listOf(setting)))
                 rootFormRowLookup[setting] = formRow
                 addFormRow(formRow)
@@ -81,12 +78,7 @@ class StyleForm<S : Style>(
             val valueWidget = makeSettingWidget(setting)
             wrappedWidgets.add(valueWidget)
             valueWidgets[setting] = valueWidget
-            wrappedLabels?.add(
-                if (idx !in spec.settingLabels) null else {
-                    var wrappedLabel = l10n(l10nKey(setting.name))
-                    spec.settingUnits?.getOrNull(idx)?.let { wrappedLabel += " [$it]" }
-                    wrappedLabel
-                })
+            wrappedLabels?.add(if (idx !in spec.settingLabels) null else l10n(l10nKey(setting.name)))
         }
         val unionWidget = UnionWidget(
             wrappedWidgets, wrappedLabels, spec.settingIcons, spec.settingGaps, spec.settingNewlines
@@ -94,7 +86,7 @@ class StyleForm<S : Style>(
         val unionName = spec.unionName ?: spec.settings.first().name
         val unionLabel = spec.unionLabel ?: spec.unionLabelL10nKey?.let(::l10n) ?: l10n(l10nKey(unionName))
         val unionDesc = spec.unionDescL10nKey?.let(::l10n) ?: desc(unionName)
-        val formRow = makeFormRow(unionLabel, spec.unionUnit, unionDesc, unionWidget)
+        val formRow = makeFormRow(unionLabel, unionDesc, unionWidget)
         rootFormRows.add(Pair(formRow, spec.settings))
         for (setting in spec.settings)
             rootFormRowLookup[setting] = formRow
@@ -225,10 +217,10 @@ class StyleForm<S : Style>(
         val styleNameConstr = settingConstraints.oneOf<StyleNameConstr<S, *>>()
         val colorConstr = settingConstraints.oneOf<ColorConstr<S>>()
         val siblingOrdinalConstr = settingConstraints.oneOf<SiblingOrdinalConstr<*>>()
+        val unitWidgetSpec = settingWidgetSpecs.oneOf<UnitWidgetSpec<S>>()
         val widthWidgetSpec = settingWidgetSpecs.oneOf<WidthWidgetSpec<S>>()
         val numberWidgetSpec = settingWidgetSpecs.oneOf<NumberWidgetSpec<S, Number>>()
         val toggleButtonGroupWidgetSpec = settingWidgetSpecs.oneOf<ToggleButtonGroupWidgetSpec<S, *>>()
-        val multiplierWidgetSpec = settingWidgetSpecs.oneOf<MultiplierWidgetSpec<S>>()
         val timecodeWidgetSpec = settingWidgetSpecs.oneOf<TimecodeWidgetSpec<S>>()
 
         val widthSpec = widthWidgetSpec?.widthSpec
@@ -251,27 +243,26 @@ class StyleForm<S : Style>(
             )
         else when (setting.type) {
             Int::class.javaPrimitiveType, Int::class.javaObjectType -> {
-                val min = intConstr?.min
-                val max = intConstr?.max
-                val step = numberWidgetSpec?.step ?: 1
-                val model = SpinnerNumberModel(min ?: max ?: 0, min, max, step)
+                val limiter = Scrubber.NumberLimiter(intConstr?.min, intConstr?.max, intConstr?.atom)
+                val sensitivity = numberWidgetSpec?.sensitivity
                 if (siblingOrdinalConstr != null) {
                     // See makeListWidget() for a comment on why we need an inconsistent widget for sibling ordinals.
                     InconsistentComboBoxWidget(Int::class.javaObjectType, items = emptyList(), widthSpec = widthSpec)
-                } else if (timecodeWidgetSpec != null)
-                    TimecodeWidget(model, FPS(1, 1), TimecodeFormat.entries[0], widthSpec)
-                else
-                    SpinnerWidget(Int::class.javaObjectType, model, widthSpec = widthSpec)
+                } else if (timecodeWidgetSpec != null) {
+                    val scheme = Scrubber.FramesAsTimecodeScheme(FPS(1, 1), TimecodeFormat.entries[0])
+                    TimecodeWidget(scheme, limiter, widthSpec)
+                } else {
+                    val scheme = Scrubber.NumericScheme(Int::class.javaObjectType, unit = unitWidgetSpec?.unit)
+                    ScrubberWidget(scheme, limiter, sensitivity, widthSpec)
+                }
             }
             Double::class.javaPrimitiveType, Double::class.javaObjectType -> {
-                val min = doubleConstr?.let { if (it.minInclusive) it.min else it.min?.plus(0.0001) }
-                val max = doubleConstr?.let { if (it.maxInclusive) it.max else it.max?.minus(0.0001) }
-                val step = numberWidgetSpec?.step ?: 1.0
-                val model = SpinnerNumberModel(min ?: max ?: 0.0, min, max, step)
-                if (multiplierWidgetSpec != null)
-                    MultipliedSpinnerWidget(model, widthSpec = widthSpec)
-                else
-                    SpinnerWidget(Double::class.javaObjectType, model, widthSpec = widthSpec)
+                val min = doubleConstr?.let { if (it.minInclusive) it.min else it.min?.plus(0.001) }
+                val max = doubleConstr?.let { if (it.maxInclusive) it.max else it.max?.minus(0.001) }
+                val limiter = Scrubber.NumberLimiter(min, max)
+                val sensitivity = numberWidgetSpec?.sensitivity
+                val scheme = Scrubber.NumericScheme(Double::class.javaObjectType, unit = unitWidgetSpec?.unit)
+                ScrubberWidget(scheme, limiter, sensitivity, widthSpec)
             }
             Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> when {
                 toggleButtonGroupWidgetSpec != null -> makeToggleButtonGroupWidget(
@@ -360,8 +351,7 @@ class StyleForm<S : Style>(
         inconsistent
     )
 
-    private fun makeFormRow(label: String, unit: String?, desc: String?, widget: Widget<*>): FormRow {
-        val label = if (unit == null) label else "$label [$unit]"
+    private fun makeFormRow(label: String, desc: String?, widget: Widget<*>): FormRow {
         val formRow = FormRow(label, widget)
         if (desc != null)
             formRow.notice = Notice(Severity.INFO, desc)
@@ -580,17 +570,20 @@ class StyleForm<S : Style>(
 
     fun setMultiplier(setting: StyleSetting<S, *>, multiplier: Double) {
         valueWidgets.getValue(setting).applyConfigurator { widget ->
-            if (widget is MultipliedSpinnerWidget)
-                widget.multiplier = multiplier
+            if (widget is ScrubberWidget) {
+                @Suppress("UNCHECKED_CAST")
+                widget as ScrubberWidget<Double>
+                val scheme = widget.scheme
+                if (scheme is Scrubber.NumericScheme && scheme.valueClass == Double::class.javaObjectType)
+                    widget.scheme = scheme.copy(multiplier = multiplier)
+            }
         }
     }
 
     fun setTimecodeFPSAndFormat(setting: StyleSetting<S, *>, fps: FPS, timecodeFormat: TimecodeFormat) {
         valueWidgets.getValue(setting).applyConfigurator { widget ->
-            if (widget is TimecodeWidget) {
-                widget.fps = fps
-                widget.timecodeFormat = timecodeFormat
-            }
+            if (widget is TimecodeWidget)
+                widget.scheme = Scrubber.FramesAsTimecodeScheme(fps, timecodeFormat)
         }
     }
 

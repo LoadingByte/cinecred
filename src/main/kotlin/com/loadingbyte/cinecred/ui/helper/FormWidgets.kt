@@ -281,177 +281,55 @@ class FileWidget(
 }
 
 
-open class SpinnerWidget<V : Number>(
-    private val valueClass: Class<V>,
-    model: SpinnerNumberModel,
-    decimalFormatPattern: String? = null,
+open class ScrubberWidget<V : Number>(
+    scheme: Scrubber.Scheme<V>,
+    limiter: Scrubber.Limiter<V>? = null,
+    sensitivity: Double? = null,
     widthSpec: WidthSpec? = null
 ) : Form.AbstractWidget<V>() {
 
-    protected val spinner = object : JSpinner(model) {
-        // We override this method s.t. the editor is correctly recreated when the model is changed.
-        override fun createEditor(model: SpinnerModel): JComponent =
-            when (decimalFormatPattern) {
-                null -> NumberEditor(this)
-                else -> NumberEditor(this, decimalFormatPattern)
-            }.apply { (textField.formatter as DefaultFormatter).makeSafe() }
-    }
+    protected val scrubber = Scrubber(scheme)
 
     init {
-        require(valueClass == Int::class.javaObjectType || valueClass == Double::class.javaObjectType)
+        limiter?.let(scrubber::limiter::set)
+        sensitivity?.also(scrubber::sensitivity::set)
 
-        spinner.addChangeListener {
-            val newValue = valueClass.cast(spinner.value)
+        scrubber.addValueListener {
+            val newValue = scrubber.value
             // Only update the widget's value if the new value diverges sufficiently from the old one. We need this
-            // check because the spinner uses its formatter's stringToValue() function once BEFORE the value is actually
+            // check since the scrubber uses its formatter's stringToValue() function once BEFORE the value is actually
             // increased or decreased, and due to floating point inaccuracy, that can change the value ever so slightly.
-            if (valueClass != Double::class.javaObjectType || abs(newValue.toDouble() - value.toDouble()) > 0.00001) {
+            if (newValue !is Float && newValue !is Double || abs(newValue.toDouble() - value.toDouble()) > 0.00001) {
                 value = newValue
                 notifyChangeListeners()
             }
         }
     }
 
-    override val components = listOf(spinner)
+    override val components = listOf(scrubber)
     override val constraints = listOf("hmin $STD_HEIGHT, " + (widthSpec ?: WidthSpec.NARROW).mig)
 
-    open var model: SpinnerNumberModel
-        get() = spinner.model as SpinnerNumberModel
-        set(model) {
-            spinner.model = model
-        }
+    var scheme: Scrubber.Scheme<V> by scrubber::scheme
+    var limiter: Scrubber.Limiter<V>? by scrubber::limiter
+    var sensitivity: Double by scrubber::sensitivity
 
-    override var value: V = valueClass.cast(spinner.value)
+    override var value: V = scrubber.value
         set(value) {
             field = value
-            spinner.value = value
+            scrubber.value = value
         }
-
-}
-
-
-class MultipliedSpinnerWidget(
-    model: SpinnerNumberModel,
-    decimalFormatPattern: String? = null,
-    widthSpec: WidthSpec? = null
-) : SpinnerWidget<Double>(Double::class.javaObjectType, model, decimalFormatPattern, widthSpec) {
-
-    private val step = model.stepSize as Double
-
-    var multiplier: Double = 1.0
-        set(multiplier) {
-            if (field == multiplier)
-                return
-            field = multiplier
-            // Note: We have verified that changing the formatter only causes valueToString(), but not stringToValue()
-            // calls. Hence, the value in the spinner model remains unmodified each time the multiplier is changed.
-            // As such, no floating point drift occurs.
-            (spinner.editor as JSpinner.DefaultEditor).textField.formatterFactory =
-                DefaultFormatterFactory(MultipliedFormatter(model, multiplier))
-            // Also adapt the step size to the multiplier. Notice that this triggers ChangeEvents, which we discard.
-            withoutChangeListeners { model.stepSize = step / multiplier }
-        }
-
-    override var model: SpinnerNumberModel
-        get() = super.model
-        set(_) = throw UnsupportedOperationException()
-
-
-    private class MultipliedFormatter(
-        private val model: SpinnerNumberModel,
-        private val multiplier: Double
-    ) : NumberFormatter() {
-        init {
-            valueClass = model.value.javaClass
-            makeSafe()
-        }
-
-        // Necessary to have limits on the text input. If the multiplier is negative, the bounds need to be flipped.
-        // Otherwise, the user would only be allowed to input out-of-bounds numbers.
-        override fun getMinimum(): Comparable<*>? = if (multiplier < 0) model.maximum else model.minimum
-        override fun getMaximum(): Comparable<*>? = if (multiplier < 0) model.minimum else model.maximum
-        override fun setMinimum(minimum: Comparable<*>?) = throw UnsupportedOperationException()
-        override fun setMaximum(maximum: Comparable<*>?) = throw UnsupportedOperationException()
-
-        override fun valueToString(value: Any?): String =
-            super.valueToString(value as Double * multiplier)
-
-        override fun stringToValue(string: String?): Double =
-            (super.stringToValue(string) as Number).toDouble() / multiplier
-    }
 
 }
 
 
 class TimecodeWidget(
-    model: SpinnerNumberModel,
-    fps: FPS,
-    timecodeFormat: TimecodeFormat,
+    scheme: Scrubber.FramesAsTimecodeScheme,
+    limiter: Scrubber.Limiter<Int>,
     widthSpec: WidthSpec? = null
-) : SpinnerWidget<Int>(Int::class.javaObjectType, model, widthSpec = widthSpec ?: WidthSpec.FIT) {
-
-    var fps: FPS = fps
-        set(fps) {
-            if (field == fps)
-                return
-            field = fps
-            updateFormatter()
-        }
-
-    var timecodeFormat: TimecodeFormat = timecodeFormat
-        set(timecodeFormat) {
-            if (field == timecodeFormat)
-                return
-            field = timecodeFormat
-            updateFormatter()
-        }
-
-    override var model: SpinnerNumberModel
-        get() = super.model
-        set(_) = throw UnsupportedOperationException()
-
-    private val signed = model.minimum.let { it == null || (it as Int) < 0 }
-    private val editor = makeTimecodeEditor(spinner)
-
+) : ScrubberWidget<Int>(scheme, limiter, sensitivity = 1.0, widthSpec = widthSpec ?: WidthSpec.FIT) {
     init {
-        spinner.putClientProperty(STYLE_CLASS, "monospaced")
-        spinner.editor = editor
-        updateFormatter()
+        scrubber.putClientProperty(STYLE_CLASS, "monospaced")
     }
-
-    private fun updateFormatter() {
-        editor.textField.formatterFactory = DefaultFormatterFactory(TimecodeFormatter())
-    }
-
-
-    private inner class TimecodeFormatter : DefaultFormatter() {
-        init {
-            valueClass = Int::class.javaObjectType
-            makeSafe()
-        }
-
-        // We need to catch exceptions here because formatTimecode() throws some when using non-fractional FPS together
-        // with a drop-frame timecode.
-        override fun valueToString(value: Any?): String = try {
-            val tc = formatTimecode(fps, timecodeFormat, abs(value as Int))
-            if (value < 0) "-$tc" else if (signed) "+$tc" else tc
-        } catch (_: IllegalArgumentException) {
-            ""
-        }
-
-        override fun stringToValue(string: String?): Int = try {
-            val c0 = string!![0]
-            val n = parseTimecode(fps, timecodeFormat, if (c0 == '+' || c0 == '-') string.substring(1) else string)
-            val s = if (signed && c0 == '-') -n else n
-            require(model.minimum.let { it == null || it as Int <= s })
-            require(model.maximum.let { it == null || it as Int >= s })
-            s
-        } catch (_: Exception) {
-            throw ParseException("", 0)
-        }
-
-    }
-
 }
 
 
@@ -525,14 +403,15 @@ class TapeSliceWidget : Form.AbstractWidget<TapeSlice>() {
         }
 
     private fun onFPSOrTcFormatOrRangeChanged(formatChanged: Boolean = false) {
+        var valueChanged = false
         withoutChangeListeners {
             inWidget.defaultValue = range?.start?.let(::coerceToFormat)
             outWidget.defaultValue = range?.endInclusive?.let(::coerceToFormat)
+            valueChanged = formatChanged or
+                    (inWidget.wrapped as TimecodeWidget).onFPSOrTcFormatOrRangeChanged() or
+                    (outWidget.wrapped as TimecodeWidget).onFPSOrTcFormatOrRangeChanged()
         }
-        if (formatChanged or
-            (inWidget.wrapped as TimecodeWidget).onFPSOrTcFormatOrRangeChanged() or
-            (outWidget.wrapped as TimecodeWidget).onFPSOrTcFormatOrRangeChanged()
-        )
+        if (valueChanged)
             notifyChangeListeners()
     }
 
@@ -544,24 +423,6 @@ class TapeSliceWidget : Form.AbstractWidget<TapeSlice>() {
                 null
             }
 
-    private fun isInRange(timecode: Timecode): Boolean {
-        val range = this.range ?: return true
-        val start = range.start
-        val end = range.endInclusive
-        if (timecode is Timecode.Frames && start is Timecode.Frames && end is Timecode.Frames ||
-            timecode is Timecode.Clock && start is Timecode.Clock && end is Timecode.Clock
-        )
-            return timecode in range
-        try {
-            fps?.let { fps -> return timecode.toClock(fps) in start.toClock(fps)..end.toClock(fps) }
-        } catch (_: IllegalArgumentException) {
-        }
-        // This is a last-resort best-effort check.
-        if (timecode is Timecode.ExactFramesInSecond && start is Timecode.Clock && end is Timecode.Clock)
-            return timecode.seconds in start.seconds..end.seconds
-        return true
-    }
-
 
     private data class FormatWrapper(override val item: TimecodeFormat) : ComboBoxWrapper {
         override fun toString() = item.label
@@ -570,102 +431,28 @@ class TapeSliceWidget : Form.AbstractWidget<TapeSlice>() {
 
     private inner class TimecodeWidget : Form.AbstractWidget<Timecode>() {
 
-        private val spinner = JSpinner(TimecodeModel(zeroTimecode(format)))
-        private val editor = makeTimecodeEditor(spinner)
+        private val scrubber = Scrubber(Scrubber.TimecodeScheme(fps, format))
 
         init {
-            spinner.apply {
-                isEnabled = false
-                addChangeListener { notifyChangeListeners() }
+            scrubber.apply {
+                sensitivity = 1.0
+                addValueListener { notifyChangeListeners() }
                 putClientProperty(STYLE_CLASS, "monospaced")
-                editor = this@TimecodeWidget.editor
             }
         }
 
-        override val components = listOf(spinner)
+        override val components = listOf(scrubber)
         override val constraints = listOf("hmin $STD_HEIGHT, " + WidthSpec.FIT.mig)
 
-        override var value: Timecode
-            get() = spinner.value as Timecode
-            set(value) {
-                spinner.value = value
-            }
+        override var value by scrubber::value
 
         fun onFPSOrTcFormatOrRangeChanged(): Boolean {
-            editor.textField.formatterFactory = DefaultFormatterFactory(TimecodeFormatter())
+            scrubber.scheme = Scrubber.TimecodeScheme(fps, format)
+            scrubber.limiter = range?.let { Scrubber.TimecodeLimiter(it.start, it.endInclusive) }
             val oldValue = value
             val newValue = coerceToFormat(oldValue) ?: zeroTimecode(format)
-            val model = TimecodeModel(newValue)
-            spinner.model = model
-            // Firing a state change event is necessary to update the text field.
-            withoutChangeListeners { model.fireStateChanged() }
+            value = newValue
             return oldValue != newValue
-        }
-    }
-
-
-    private inner class TimecodeModel(private var timecode: Timecode) : AbstractSpinnerModel() {
-
-        public override fun fireStateChanged() = super.fireStateChanged()
-
-        override fun getValue() = timecode
-
-        override fun setValue(value: Any) {
-            if (timecode != value) {
-                timecode = value as Timecode
-                fireStateChanged()
-            }
-        }
-
-        override fun getNextValue() = getNeighboringValue(1)
-        override fun getPreviousValue() = getNeighboringValue(-1)
-
-        private fun getNeighboringValue(sign: Int): Timecode? {
-            val fps = fps
-            val tc = timecode
-            var neighbor: Timecode? = null
-            if (fps != null && tc !is Timecode.Clock /* exclude clock to not deteriorate its precision */)
-                try {
-                    neighbor = Timecode.Frames(max(0, tc.toFrames(fps).frames + sign)).toFormat(tc.format, fps)
-                } catch (_: IllegalArgumentException) {
-                }
-            if (neighbor == null)
-                neighbor = when (tc) {
-                    is Timecode.Frames -> Timecode.Frames(max(0, tc.frames + sign))
-                    is Timecode.Clock -> when {
-                        sign == 1 -> tc + Timecode.Clock(1, 1)
-                        tc.seconds != 0 -> tc - Timecode.Clock(1, 1)
-                        else -> Timecode.Clock(0, 1)
-                    }
-                    is Timecode.ExactFramesInSecond -> Timecode.ExactFramesInSecond(
-                        seconds = max(0, tc.seconds + if (sign == -1 && tc.frames != 0) 0 else sign), frames = 0
-                    )
-                    is Timecode.SMPTENonDropFrame, is Timecode.SMPTEDropFrame -> null
-                }
-            return if (neighbor != null && isInRange(neighbor)) neighbor else null
-        }
-
-    }
-
-
-    private inner class TimecodeFormatter : DefaultFormatter() {
-
-        init {
-            valueClass = Timecode::class.javaObjectType
-            makeSafe()
-        }
-
-        override fun valueToString(value: Any?): String =
-            (value as? Timecode)?.toString(fps) ?: ""
-
-        override fun stringToValue(string: String?): Timecode = try {
-            val tc = parseTimecode(format, string!!)
-            // These checks throw if the entered timecode is invalid.
-            require(isInRange(tc))
-            fps?.let(tc::toFrames)
-            tc
-        } catch (_: Exception) {
-            throw ParseException("", 0)
         }
 
     }
@@ -1331,15 +1118,17 @@ abstract class AbstractResolutionWidget<V : Any> protected constructor(
         }
     )
 
-    private val widthWidget = makeDimensionSpinner()
-    private val heightWidget = makeDimensionSpinner()
+    private val widthWidget = makeDimensionScrubber()
+    private val heightWidget = makeDimensionScrubber()
     private val timesLabel = JLabel("\u00D7")
 
     private var initializedCustom = false
     private var prevChoicePreset = CHOICE_PRESETS[1]  // start out with Full HD
 
-    private fun makeDimensionSpinner() =
-        SpinnerWidget(Int::class.javaObjectType, SpinnerNumberModel(1, 1, null, 10), "#", WidthSpec.LITTLE)
+    private fun makeDimensionScrubber() = ScrubberWidget(
+        Scrubber.NumericScheme(Int::class.javaObjectType, unit = "px"), Scrubber.NumberLimiter(min = 1),
+        sensitivity = 1.0, widthSpec = WidthSpec.LITTLE
+    )
 
     init {
         // When a wrapped widget changes, notify this widget's change listeners that that widget has changed.
@@ -1674,7 +1463,7 @@ class FontChooserWidget(
 
 class FontVariationsWidget : Form.AbstractWidget<FontVariations>(), Form.RowManagingWidget<FontVariations> {
 
-    private val spinnerWidgets: List<SpinnerWidget<Double>>
+    private val scrubberWidgets: List<ScrubberWidget<Double>>
     private val overrideWidgets: List<OverrideWidget<Double>>
 
     private var stashedVariations = emptyMap<String, Double>()
@@ -1682,17 +1471,17 @@ class FontVariationsWidget : Form.AbstractWidget<FontVariations>(), Form.RowMana
     private val notices = HashMap<String, Form.Notice>()
 
     init {
-        spinnerWidgets = mutableListOf()
+        scrubberWidgets = mutableListOf()
         overrideWidgets = mutableListOf()
         repeat(MAX_NUM_AXES) {
-            val spinnerWidget = SpinnerWidget(
-                Double::class.javaObjectType, SpinnerNumberModel(0.0, 0.0, 1.0, 1.0), widthSpec = WidthSpec.LITTLE
+            val scrubberWidget = ScrubberWidget(
+                Scrubber.NumericScheme(Double::class.javaObjectType), widthSpec = WidthSpec.LITTLE
             )
-            val overrideWidget = OverrideWidget(spinnerWidget)
+            val overrideWidget = OverrideWidget(scrubberWidget)
             overrideWidget.isVisible = false
-            // When an opt spinner widget changes, notify this widget's change listeners that that widget has changed.
+            // When an override widget changes, notify this widget's change listeners that that widget has changed.
             overrideWidget.changeListeners.add(::notifyChangeListenersAboutOtherWidgetChange)
-            spinnerWidgets.add(spinnerWidget)
+            scrubberWidgets.add(scrubberWidget)
             overrideWidgets.add(overrideWidget)
         }
     }
@@ -1744,8 +1533,10 @@ class FontVariationsWidget : Form.AbstractWidget<FontVariations>(), Form.RowMana
                     }
                     labelComps[idx].apply { text = label; toolTipText = label }
                     withoutChangeListeners {
-                        val stp = ceil((axis.maxValue - axis.minValue) / 100)
-                        spinnerWidgets[idx].model = SpinnerNumberModel(axis.minValue, axis.minValue, axis.maxValue, stp)
+                        scrubberWidgets[idx].apply {
+                            limiter = Scrubber.NumberLimiter(axis.minValue, axis.maxValue)
+                            sensitivity = ceil((axis.maxValue - axis.minValue) * 0.01) * 0.1
+                        }
                         overrideWidgets[idx].apply {
                             defaultValue = axis.defaultValue
                             value = Override(rem.remove(axis.tag))
@@ -1790,7 +1581,7 @@ class FontVariationsWidget : Form.AbstractWidget<FontVariations>(), Form.RowMana
 
     private fun applySeverities() {
         for ((idx, axis) in axes.withIndex())
-            spinnerWidgets[idx].setSeverity(-1, severities[axis.tag])
+            scrubberWidgets[idx].setSeverity(-1, severities[axis.tag])
     }
 
     override fun getNoticeOverride(rowIndex: Int) = axes.getOrNull(rowIndex)?.let { notices[it.tag] }
@@ -1830,8 +1621,9 @@ class FontFeatureWidget : Form.AbstractWidget<FontFeature>() {
         toString = ::noEllipsisLabel,
         widthSpec = WidthSpec.LITTLE
     )
-    private val valWidget = SpinnerWidget(
-        Int::class.javaObjectType, SpinnerNumberModel(1, 0, null, 1), widthSpec = WidthSpec.TINIER
+    private val valWidget = ScrubberWidget(
+        Scrubber.NumericScheme(Int::class.javaObjectType), Scrubber.NumberLimiter(min = 0),
+        widthSpec = WidthSpec.TINIER
     )
 
     init {
@@ -2791,20 +2583,4 @@ private fun String.removeAnySuffix(suffixes: List<String>, ignoreCase: Boolean =
  */
 private fun DefaultFormatter.makeSafe() {
     commitsOnValidEdit = true
-}
-
-
-private fun makeTimecodeEditor(spinner: JSpinner) = object : JSpinner.DefaultEditor(spinner) {
-    init {
-        textField.isEditable = true
-    }
-
-    // There is a subtle bug in the JDK which causes JTextField and its subclasses to not utilize a one pixel wide
-    // column at the right for drawing; instead, it is always empty. However, this column is needed to draw the
-    // caret at the rightmost position when the text field has the preferred size that exactly matches the text
-    // width (which happens to this spinner when the width spec is kept as FIT). Hence, when the user positions the
-    // caret at the rightmost location, the text scrolls one pixel to the left to accommodate the caret. We did not
-    // manage to localize the source of this bug, but as a workaround, we just add one more pixel to the preferred
-    // width, thereby providing the required space for the caret when it is at the rightmost position.
-    override fun getPreferredSize() = super.getPreferredSize().apply { if (!isPreferredSizeSet) width += 1 }
 }

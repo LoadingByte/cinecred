@@ -515,8 +515,8 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             }
         )
 
-        val aspectRatioHWidget = makeAspectRatioSpinnerWidget()
-        val aspectRatioVWidget = makeAspectRatioSpinnerWidget()
+        val aspectRatioHWidget = makeAspectRatioScrubberWidget()
+        val aspectRatioVWidget = makeAspectRatioScrubberWidget()
 
         init {
             addWidget(
@@ -536,15 +536,15 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
         )
 
         val linesHWidget = addWidget(
-            l10n("ui.preferences.overlays.configure.linesH") + " [px]",
-            SimpleListWidget(makeElementWidget = ::makeLineSpinnerWidget, newElement = 0, elementsPerRow = 2),
+            l10n("ui.preferences.overlays.configure.linesH"),
+            SimpleListWidget(makeElementWidget = ::makeLineScrubberWidget, newElement = 0, elementsPerRow = 2),
             description = l10n("ui.preferences.overlays.configure.lines.desc"),
             isVisible = { typeWidget.value == LinesOverlay::class.java }
         )
 
         val linesVWidget = addWidget(
-            l10n("ui.preferences.overlays.configure.linesV") + " [px]",
-            SimpleListWidget(makeElementWidget = ::makeLineSpinnerWidget, newElement = 0, elementsPerRow = 2),
+            l10n("ui.preferences.overlays.configure.linesV"),
+            SimpleListWidget(makeElementWidget = ::makeLineScrubberWidget, newElement = 0, elementsPerRow = 2),
             description = l10n("ui.preferences.overlays.configure.lines.desc"),
             isVisible = { typeWidget.value == LinesOverlay::class.java }
         )
@@ -569,12 +569,14 @@ class PreferencesPanel(private val welcomeCtrl: WelcomeCtrlComms) : JPanel() {
             isVisible = { typeWidget.value == ImageOverlay::class.java }
         )
 
-        private fun makeAspectRatioSpinnerWidget() = SpinnerWidget(
-            Double::class.javaObjectType, SpinnerNumberModel(1.0, 1.0, null, 1.0), widthSpec = WidthSpec.LITTLE
+        private fun makeAspectRatioScrubberWidget() = ScrubberWidget(
+            Scrubber.NumericScheme(Double::class.javaObjectType), Scrubber.NumberLimiter(min = 1.0),
+            widthSpec = WidthSpec.LITTLE
         )
 
-        private fun makeLineSpinnerWidget() = SpinnerWidget(
-            Int::class.javaObjectType, SpinnerNumberModel(0, null, null, 1), widthSpec = WidthSpec.LITTLE
+        private fun makeLineScrubberWidget() = ScrubberWidget(
+            Scrubber.NumericScheme(Int::class.javaObjectType, unit = "px"), sensitivity = 1.0,
+            widthSpec = WidthSpec.LITTLE
         )
 
         override fun onChange(widget: Widget<*>) {

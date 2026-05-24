@@ -24,14 +24,17 @@ import com.loadingbyte.cinecred.ui.PresetWindowLayout
 import com.loadingbyte.cinecred.ui.comms.DockableId.*
 import com.loadingbyte.cinecred.ui.comms.WelcomeTab
 import com.loadingbyte.cinecred.ui.helper.BUNDLED_FAMILIES
+import com.loadingbyte.cinecred.ui.helper.Scrubber
 import java.awt.Container
 import java.awt.Dimension
 import java.awt.KeyboardFocusManager
 import java.awt.Point
 import java.lang.Thread.sleep
 import java.lang.foreign.MemorySegment.NULL
-import javax.swing.*
-import javax.swing.JSpinner.NumberEditor
+import javax.swing.JComboBox
+import javax.swing.JScrollPane
+import javax.swing.JTextArea
+import javax.swing.JTextField
 import kotlin.io.path.name
 
 
@@ -186,8 +189,8 @@ object GuideUserInterfaceOverlaysCustomDemo : ScreencastDemo("$DIR/overlays-cust
         sc.type(welcomeWin, prefsPanel.leakedCfgOverlayNameWidget.components[0] as JTextField, "Demo")
         sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgOverlayLinesHWidget.components[0]))
         sc.click()
-        val linesHSpinner = prefsPanel.leakedCfgOverlayLinesHWidget.components[1].getComponent(1) as JSpinner
-        sc.type(welcomeWin, (linesHSpinner.editor as NumberEditor).textField, "200")
+        val linesHScrubber = prefsPanel.leakedCfgOverlayLinesHWidget.components[1].getComponent(1) as Scrubber<*>
+        sc.type(welcomeWin, linesHScrubber, "200")
         sc.mouseTo(welcomeWin.desktopPosOf(prefsPanel.leakedCfgOverlayDoneButton))
         sc.click(0)
         sc.hold(2 * hold)

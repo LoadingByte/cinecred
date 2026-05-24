@@ -12,6 +12,7 @@ Cinecred Changelog
       old floating window layout is still available and can be again set as
       default to restore the old behavior.
     - Custom window layouts can be saved and later restored, or set as default.
+- Replaced spinners with the scrubby sliders known from other video software.
 - Any spreadsheet file in the project folder is now considered a credits file.
   All of them are read in simultaneously and have their sheets presented as
   isolated credits sequences.

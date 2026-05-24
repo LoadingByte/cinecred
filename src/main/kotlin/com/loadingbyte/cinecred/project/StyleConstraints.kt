@@ -435,9 +435,7 @@ private val TAPE_STYLE_CONSTRAINTS: List<StyleConstraint<TapeStyle, *>> = listOf
             true
         }
     },
-    JudgeConstr(WARN, msg("project.styling.constr.nonOrthogonalRotation"), TapeStyle::rotationDeg.st()) { _, style ->
-        style.rotationDeg % 90 == 0
-    },
+    IntConstr(ERROR, TapeStyle::rotationDeg.st(), atom = 90),
     TapeSliceConstr(
         WARN, TapeStyle::slice.st(),
         getFPS = { styling, style ->
@@ -503,6 +501,7 @@ class IntConstr<S : Style>(
     setting: StyleSetting<S, Int>,
     val min: Int? = null,
     val max: Int? = null,
+    val atom: Int? = null
 ) : StyleConstraint<S, StyleSetting<S, Int>>(setting)
 
 
@@ -675,10 +674,13 @@ fun verifyConstraints(styling: Styling): MutableList<ConstraintViolation> {
                     style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, value ->
                         val min = cst.min
                         val max = cst.max
+                        val atom = cst.atom
                         if (min != null && value < min)
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.numberGTE", min))
                         if (max != null && value > max)
                             log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.numberLTE", max))
+                        if (atom != null && value % atom != 0)
+                            log(rootStyle, style, st, idx, cst.severity, l10n("project.styling.constr.numberMod", atom))
                     }
                 is DoubleConstr ->
                     style.forEachRelevantSubject(cst, ignoreSettings) { st, idx, value ->

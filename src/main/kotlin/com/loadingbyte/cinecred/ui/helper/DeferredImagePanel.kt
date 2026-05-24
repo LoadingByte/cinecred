@@ -318,9 +318,9 @@ class DeferredImagePanel(
             // If the first step didn't start the materialization of the entire deferred image yet, schedule the
             // materialization of a larger area around the viewport (this allows the user to move around a bit) after
             // some delay has passed. If the image changes again before the waiting time is up, the scheduled job is
-            // canceled. This way, when the user is pushing down a spinner and quickly cycles through images, we only
+            // canceled. This way, when the user is dragging a scrubber and quickly cycles through images, we only
             // spend compute on materializing the current viewport of the currently presented image panel. Only after he
-            // has let go of the spinner will the other images catch up and will a larger area be materialized.
+            // has let go of the scrubber will the other images catch up and will a larger area be materialized.
             val delayedHeight = min(
                 imageHeight,
                 // If a raster image of the entire deferred image with the current physical scaling would exceed
@@ -377,8 +377,8 @@ class DeferredImagePanel(
                     this.lowResMaterializedContentVersion = contentVersion
                 }
                 // This is a bit hacky. When materialization has finished, we want to repaint the canvas.
-                // However, the user might have supplied a new image in the meantime (e.g., because he's pushing
-                // down on some style config spinner). To avoid that the repainting of the canvas is done with
+                // However, the user might have supplied a new image in the meantime (e.g., because he's dragging
+                // some style config scrubber). To avoid that the repainting of the canvas is done with
                 // a wrong image in the this.image variable (which would lead to a wrongly calculated viewport
                 // position and hence to awful jitter), we briefly set this.image to the image used as a source
                 // for the just generated materialized image. After the canvas has been repainted (we use

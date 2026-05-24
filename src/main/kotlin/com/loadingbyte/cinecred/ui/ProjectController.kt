@@ -623,7 +623,7 @@ class ProjectController(
                     history.removeAt(history.lastIndex)
                 // If the user edits the same setting multiple times in quick succession, do not memorize a new
                 // state for each edit, but instead overwrite the last state after each edit. This for example avoids
-                // a new state being created for each increment of a spinner.
+                // a new state being created for each increment of a scrubber.
                 val currMillis = System.currentTimeMillis()
                 val rapidSucc = editedId != null && editedId == lastEditedId && currMillis - lastEditedMillis < 1000
                 lastEditedId = editedId

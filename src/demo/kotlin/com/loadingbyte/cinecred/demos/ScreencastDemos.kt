@@ -231,10 +231,10 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.caption("screencast.caption.styling.runtime")
         sc.mouseTo(prjWin.desktopPosOfSetting(styGlobForm, Global::runtimeFrames.st(), 0))
         sc.click()
-        sc.mouseTo(prjWin.desktopPosOf(styDecRuntime))
-        repeat(47) { sc.click(10, 1) }
-        sc.click()
-        styRuntime.transferFocusBackward()  // Avoid that the moving mouse selects text in the spinner text field.
+        sc.mouseTo(prjWin.desktopPosOf(styRuntime))
+        dt.mouseDownAndDrag()
+        sc.mouseTo(prjWin.desktopPosOf(styRuntime).apply { x += 48 })
+        dt.mouseUp()
         sc.caption("screencast.caption.styling.reset")
         sc.mouseTo(prjWin.desktopPosOf(tolDok.leakedResetStylingButton))
         sc.click()
@@ -280,11 +280,9 @@ object ScreencastScreencastDemo : ScreencastDemo(
         sc.caption("screencast.caption.gutter.justify")
         sc.demonstrateSetting(prjWin, styContForm, ContentStyle::gridCellHJustifyPerCol.st(), 2, 0)
         sc.caption("screencast.caption.gutter.columns")
-        sc.mouseTo(prjWin.desktopPosOf(styIncGridCols))
-        sc.click(4 * hold, 1)
-        sc.mouseTo(prjWin.desktopPosOf(styDecGridCols))
-        sc.click(hold, 1)
-        styGridCols.transferFocusBackward()  // Avoid that the moving mouse selects text in the spinner text field.
+        sc.type(prjWin, styGridCols, "2", 4 * hold)
+        sc.type(prjWin, styGridCols, "1")
+        styGridCols.transferFocusBackward()  // Avoid that the moving mouse selects text in the scrubber text field.
         sc.caption("screencast.caption.gutter.head")
         sc.demonstrateSetting(prjWin, styContForm, ContentStyle::hasHead.st(), 0, 0)
 

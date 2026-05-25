@@ -48,6 +48,7 @@ Cinecred Changelog
   in the correct places.
 - Multi-line paragraphs with mixed left-to-right and right-to-left text now have
   proper text order across all lines.
+- Text that is transformed to outside the original text box is no longer culled.
 - JPEG pictures with an EXIF orientation tag are now properly rotated.
 - PNG image sequences with 8-bit palettes can now be ingested.
 - Embedded videos with chroma subsampling no longer prevent interlaced export.

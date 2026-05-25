@@ -474,25 +474,30 @@ class FormattedString private constructor(
         private val postTx: AffineTransform?
     ) : DeferredImage.Text {
 
-        override val width get() = seg.width
-
-        override val heightAboveBaseline: Double
-        override val heightBelowBaseline: Double
+        override val bounds: Rectangle2D
 
         init {
             val font = seg.userData.font
             val b = seg.getOutlineBounds(font.hOffsetPx, font.vOffsetPx)
-            val points = doubleArrayOf(b.minX, b.minY, b.maxX, b.minY, b.minX, b.maxY, b.maxX, b.maxY)
-            postTx?.transform(points, 0, points, 0, 4)
-            var yMax = Double.NEGATIVE_INFINITY
-            var yMin = Double.POSITIVE_INFINITY
-            for (i in 0..<4) {
-                val y = points[i * 2 + 1]
-                yMax = max(yMax, y)
-                yMin = min(yMin, y)
+            if (postTx == null)
+                bounds = b
+            else {
+                val points = doubleArrayOf(b.minX, b.minY, b.maxX, b.minY, b.minX, b.maxY, b.maxX, b.maxY)
+                postTx.transform(points, 0, points, 0, 4)
+                var minX = Double.POSITIVE_INFINITY
+                var minY = Double.POSITIVE_INFINITY
+                var maxX = Double.NEGATIVE_INFINITY
+                var maxY = Double.NEGATIVE_INFINITY
+                for (i in 0..<4) {
+                    var x = points[i * 2]
+                    val y = points[i * 2 + 1]
+                    minX = min(minX, x)
+                    minY = min(minY, y)
+                    maxX = max(maxX, x)
+                    maxY = max(maxY, y)
+                }
+                bounds = Rectangle2D.Double(minX, minY, maxX - minX, maxY - minY)
             }
-            heightAboveBaseline = -yMin
-            heightBelowBaseline = yMax
         }
 
         override val outline by lazy {

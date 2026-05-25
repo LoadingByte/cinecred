@@ -125,147 +125,30 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         // Notice that because the culling rect is aligned with the pixel grid, we correctly include all content
         // that at least partially lies inside one of the surface's pixels.
         val culling = Rectangle2D.Double(0.0, 0.0, canvas.width, canvas.height)
-        materializeDeferredImage(backend, 0.0, 0.0, 1.0, 1.0, culling, this, layers)
+        materialize(backend, culling, layers)
     }
 
     /** Draws the content of this deferred image onto an SVG element. */
     fun materialize(svg: Element, layers: List<Layer>) {
-        materializeDeferredImage(SVGBackend(svg), 0.0, 0.0, 1.0, 1.0, null, this, layers)
+        materialize(SVGBackend(svg), null, layers)
     }
 
     /** Draws the content of this deferred onto a PDF page. */
     fun materialize(tracker: PDFTracker, page: PDPage, cs: PDPageContentStream, layers: List<Layer>) {
         val backend = PDFBackend(tracker as PDFTrackerImpl, page, cs)
-        materializeDeferredImage(backend, 0.0, 0.0, 1.0, 1.0, null, this, layers)
+        materialize(backend, null, layers)
     }
 
     fun collectPlacedTapes(layers: List<Layer>): List<PlacedTape> {
         val backend = PlacedTapeCollectorBackend()
-        materializeDeferredImage(backend, 0.0, 0.0, 1.0, 1.0, null, this, layers)
+        materialize(backend, null, layers)
         return backend.collected
     }
 
-    private fun materializeDeferredImage(
-        backend: MaterializationBackend,
-        x: Double, y: Double, universeScaling: Double, elasticScaling: Double, culling: Rectangle2D?,
-        image: DeferredImage, layers: List<Layer>
-    ) {
-        if (culling != null) {
-            // We want seemingly degenerate images (which can occur when a width or height is forced down to 0)
-            // to be drawn as well, but Rectangle2D.intersects() would kick them out, so we implement our own logic.
-            val w = universeScaling * image.width
-            val h = universeScaling * image.height.resolve(elasticScaling)
-            val cx = culling.x
-            val cy = culling.y
-            if (x + w < cx || y + h < cy || x > cx + culling.width || y > cy + culling.height)
-                return
-        }
+    private fun materialize(backend: MaterializationBackend, culling: Rectangle2D?, layers: List<Layer>) {
         for (layer in layers)
-            for (insn in image.instructions.getOrDefault(layer, emptyList()))
-                materializeInstruction(backend, x, y, universeScaling, elasticScaling, culling, insn)
-    }
-
-    private fun materializeInstruction(
-        backend: MaterializationBackend,
-        x: Double, y: Double, universeScaling: Double, elasticScaling: Double, culling: Rectangle2D?,
-        insn: Instruction
-    ) {
-        when (insn) {
-            is Instruction.DrawDeferredImageLayer -> materializeDeferredImage(
-                backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
-                universeScaling * insn.universeScaling, elasticScaling * insn.elasticScaling, culling,
-                insn.image, listOf(insn.layer)
-            )
-            is Instruction.DrawShape -> materializeShape(
-                backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
-                universeScaling, culling, insn.shape, insn.coat, insn.fill, false, universeScaling * insn.blurRadius
-            )
-            is Instruction.DrawLine -> materializeShape(
-                backend, x, y, universeScaling, culling,
-                Line2D.Double(insn.x1, insn.y1.resolve(elasticScaling), insn.x2, insn.y2.resolve(elasticScaling)),
-                Coat.Plain(insn.color), fill = false, insn.dash, blurRadius = 0.0
-            )
-            is Instruction.DrawRect -> materializeShape(
-                backend, x, y, universeScaling, culling,
-                Rectangle2D.Double(
-                    insn.x, insn.y.resolve(elasticScaling), insn.width, insn.height.resolve(elasticScaling)
-                ), Coat.Plain(insn.color), insn.fill, dash = false, blurRadius = 0.0
-            )
-            is Instruction.DrawText -> materializeText(
-                backend, x + universeScaling * insn.x, y + universeScaling * insn.yBaseline.resolve(elasticScaling),
-                universeScaling, culling, insn.text, insn.coat
-            )
-            is Instruction.DrawEmbeddedPicture -> materializeEmbeddedPicture(
-                backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
-                universeScaling, culling, insn.embeddedPic
-            )
-            is Instruction.DrawEmbeddedTape -> materializeEmbeddedTape(
-                backend, x + universeScaling * insn.x, y + universeScaling * insn.y.resolve(elasticScaling),
-                universeScaling, culling, insn.embeddedTape, insn.asyncThumbnail
-            )
-        }
-    }
-
-    private fun materializeShape(
-        backend: MaterializationBackend,
-        x: Double, y: Double, scaling: Double, culling: Rectangle2D?,
-        shape: Shape, coat: Coat, fill: Boolean, dash: Boolean, blurRadius: Double
-    ) {
-        // It would be a bit complicated to exactly determine which pixels are affected after the blur, so instead, we
-        // just add a safeguard buffer to better be sure that not a single blurred pixel is accidentally culled.
-        val safeBlurRadius = if (blurRadius == 0.0) 0.0 else blurRadius + 4.0
-        if (culling != null) {
-            val cx = (culling.x - x - safeBlurRadius) / scaling
-            val cy = (culling.y - y - safeBlurRadius) / scaling
-            val cw = (culling.width + 2 * safeBlurRadius) / scaling
-            val ch = (culling.height + 2 * safeBlurRadius) / scaling
-            // Empty rectangles can occur as guides when cells have 0 width, and we want to draw them anyway!
-            if (shape is Rectangle2D && shape.isEmpty) {
-                if (!(cx + cw > shape.x && cy + ch > shape.y && cx < shape.maxX && cy < shape.maxY)) return
-            } else
-                if (!shape.intersects(cx, cy, cw, ch)) return
-        }
-        // We first transform the shape and then draw it without scaling the canvas.
-        // This simplifies code in the SVG and PDF backends, and is also required for snapping hairlines to pixels.
-        val tx = AffineTransform().apply { translate(x, y); scale(scaling) }
-        backend.materializeShape(shape.transformedBy(tx), coat.transform(tx), fill, dash, blurRadius)
-    }
-
-    private fun materializeText(
-        backend: MaterializationBackend,
-        x: Double, yBaseline: Double, scaling: Double, culling: Rectangle2D?,
-        text: Text, coat: Coat
-    ) {
-        if (culling != null &&
-            !culling.intersects(
-                x,
-                yBaseline - text.heightAboveBaseline * scaling,
-                text.width * scaling,
-                (text.heightAboveBaseline + text.heightBelowBaseline) * scaling
-            )
-        ) return
-        backend.materializeText(x, yBaseline, scaling, text, coat)
-    }
-
-    private fun materializeEmbeddedPicture(
-        backend: MaterializationBackend,
-        x: Double, y: Double, scaling: Double, culling: Rectangle2D?,
-        embeddedPic: EmbeddedPicture
-    ) {
-        if (culling != null && !culling.intersects(x, y, embeddedPic.width * scaling, embeddedPic.height * scaling))
-            return
-        backend.materializeEmbeddedPicture(x, y, scaling, embeddedPic, draft = false)
-    }
-
-    private fun materializeEmbeddedTape(
-        backend: MaterializationBackend,
-        x: Double, y: Double, scaling: Double, culling: Rectangle2D?,
-        embeddedTape: EmbeddedTape, asyncThumbnail: Future<Picture.Raster?>
-    ) {
-        val resolution = embeddedTape.resolution
-        if (culling != null && !culling.intersects(x, y, resolution.widthPx * scaling, resolution.heightPx * scaling))
-            return
-        backend.materializeEmbeddedTape(x, y, scaling, embeddedTape, asyncThumbnail)
+            Instruction.DrawDeferredImageLayer(0.0, 0.0.toY(), 1.0, 1.0, this, layer)
+                .materialize(backend, 0.0, 0.0, 1.0, 1.0, culling)
     }
 
 
@@ -325,9 +208,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
     interface Text {
 
-        val width: Double
-        val heightAboveBaseline: Double
-        val heightBelowBaseline: Double
+        val bounds: Rectangle2D
         val outline: Shape
         val glyphCount: Int
         fun getGlyph(glyphIdx: Int): Int
@@ -558,34 +439,153 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
 
     private sealed interface Instruction {
 
+        fun materialize(
+            backend: MaterializationBackend,
+            x: Double, y: Double, universeScaling: Double, elasticScaling: Double, culling: Rectangle2D?
+        )
+
         class DrawDeferredImageLayer(
             val x: Double, val y: Y, val universeScaling: Double, val elasticScaling: Double,
             val image: DeferredImage, val layer: Layer
-        ) : Instruction
+        ) : Instruction {
+            override fun materialize(
+                backend: MaterializationBackend,
+                x: Double, y: Double, universeScaling: Double, elasticScaling: Double, culling: Rectangle2D?
+            ) {
+                val x = x + universeScaling * this.x
+                val y = y + universeScaling * this.y.resolve(elasticScaling)
+                val universeScaling = universeScaling * this.universeScaling
+                val elasticScaling = elasticScaling * this.elasticScaling
+                for (insn in image.instructions.getOrDefault(layer, emptyList()))
+                    insn.materialize(backend, x, y, universeScaling, elasticScaling, culling)
+            }
+        }
 
         class DrawShape(
             val x: Double, val y: Y, val shape: Shape, val coat: Coat, val fill: Boolean, val blurRadius: Double
-        ) : Instruction
+        ) : Instruction {
+            private val bounds = shape.bounds2D
+
+            override fun materialize(
+                backend: MaterializationBackend,
+                x: Double, y: Double, universeScaling: Double, elasticScaling: Double, culling: Rectangle2D?
+            ) {
+                val x = x + universeScaling * this.x
+                val y = y + universeScaling * this.y.resolve(elasticScaling)
+                val blurRadius = universeScaling * this.blurRadius
+                // It would be a bit complicated to exactly determine which pixels are affected after the blur, so
+                // instead, we just add a safeguard buffer to better be sure that not a single blurred pixel is
+                // accidentally culled.
+                val safeBlurRadius = if (blurRadius == 0.0) 0.0 else blurRadius + 4.0
+                if (culling == null ||
+                    culling.intersects(
+                        x + universeScaling * bounds.x - safeBlurRadius,
+                        y + universeScaling * bounds.y - safeBlurRadius,
+                        universeScaling * bounds.width + 2 * safeBlurRadius,
+                        universeScaling * bounds.height + 2 * safeBlurRadius
+                    )
+                ) {
+                    // We first transform the shape and then draw it without scaling the canvas. This simplifies code in
+                    // the SVG and PDF backends, and is also required for snapping hairlines to pixels.
+                    val tx = AffineTransform().apply { translate(x, y); scale(universeScaling) }
+                    backend.materializeShape(
+                        shape.transformedBy(tx), coat.transform(tx), fill, dash = false, blurRadius
+                    )
+                }
+            }
+        }
 
         class DrawLine(
             val x1: Double, val y1: Y, val x2: Double, val y2: Y, val color: Color4f, val dash: Boolean
-        ) : Instruction
+        ) : Instruction {
+            override fun materialize(
+                backend: MaterializationBackend,
+                x: Double, y: Double, universeScaling: Double, elasticScaling: Double, culling: Rectangle2D?
+            ) {
+                val x1 = x + universeScaling * this.x1
+                val y1 = y + universeScaling * this.y1.resolve(elasticScaling)
+                val x2 = x + universeScaling * this.x2
+                val y2 = y + universeScaling * this.y2.resolve(elasticScaling)
+                if (culling == null || culling.intersectsLine(x1, y1, x2, y2))
+                    backend.materializeShape(
+                        Line2D.Double(x1, y1, x2, y2), Coat.Plain(color), fill = false, dash, blurRadius = 0.0
+                    )
+            }
+        }
 
         class DrawRect(
             val x: Double, val y: Y, val width: Double, val height: Y, val color: Color4f, val fill: Boolean
-        ) : Instruction
+        ) : Instruction {
+            override fun materialize(
+                backend: MaterializationBackend,
+                x: Double, y: Double, universeScaling: Double, elasticScaling: Double, culling: Rectangle2D?
+            ) {
+                val x = x + universeScaling * this.x
+                val y = y + universeScaling * this.y.resolve(elasticScaling)
+                val w = universeScaling * this.width
+                val h = universeScaling * this.height.resolve(elasticScaling)
+                if (culling == null ||
+                    // Empty rectangles can occur as guides when cells have 0 width, and we want to draw them anyway!
+                    // culling.intersect() would throw them out, so instead, we use our own conditions.
+                    x + w > culling.minX && y + h > culling.minY && x < culling.maxX && y < culling.maxY
+                )
+                    backend.materializeShape(
+                        Rectangle2D.Double(x, y, w, h), Coat.Plain(color), fill, dash = false, blurRadius = 0.0
+                    )
+            }
+        }
 
         class DrawText(
             val x: Double, val yBaseline: Y, val text: Text, val coat: Coat
-        ) : Instruction
+        ) : Instruction {
+            override fun materialize(
+                backend: MaterializationBackend,
+                x: Double, y: Double, universeScaling: Double, elasticScaling: Double, culling: Rectangle2D?
+            ) {
+                val x = x + universeScaling * this.x
+                val yBaseline = y + universeScaling * this.yBaseline.resolve(elasticScaling)
+                if (culling == null ||
+                    culling.intersects(
+                        x + universeScaling * text.bounds.x,
+                        yBaseline + universeScaling * text.bounds.y,
+                        universeScaling * text.bounds.width,
+                        universeScaling * text.bounds.height
+                    )
+                )
+                    backend.materializeText(x, yBaseline, universeScaling, text, coat)
+            }
+        }
 
         class DrawEmbeddedPicture(
             val x: Double, val y: Y, val embeddedPic: EmbeddedPicture
-        ) : Instruction
+        ) : Instruction {
+            override fun materialize(
+                backend: MaterializationBackend,
+                x: Double, y: Double, universeScaling: Double, elasticScaling: Double, culling: Rectangle2D?
+            ) {
+                val x = x + universeScaling * this.x
+                val y = y + universeScaling * this.y.resolve(elasticScaling)
+                if (culling == null ||
+                    culling.intersects(x, y, universeScaling * embeddedPic.width, universeScaling * embeddedPic.height)
+                )
+                    backend.materializeEmbeddedPicture(x, y, universeScaling, embeddedPic, draft = false)
+            }
+        }
 
         class DrawEmbeddedTape(
             val x: Double, val y: Y, val embeddedTape: EmbeddedTape, val asyncThumbnail: Future<Picture.Raster?>
-        ) : Instruction
+        ) : Instruction {
+            override fun materialize(
+                backend: MaterializationBackend,
+                x: Double, y: Double, universeScaling: Double, elasticScaling: Double, culling: Rectangle2D?
+            ) {
+                val x = x + universeScaling * this.x
+                val y = y + universeScaling * this.y.resolve(elasticScaling)
+                val (w, h) = embeddedTape.resolution
+                if (culling == null || culling.intersects(x, y, universeScaling * w, universeScaling * h))
+                    backend.materializeEmbeddedTape(x, y, universeScaling, embeddedTape, asyncThumbnail)
+            }
+        }
 
     }
 
@@ -1141,10 +1141,10 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             }
 
             val textBBox = Rectangle2D.Double(
-                x,
-                yBaseline - text.heightAboveBaseline * scaling,
-                text.width * scaling,
-                (text.heightAboveBaseline + text.heightBelowBaseline) * scaling
+                x + text.bounds.x * scaling,
+                yBaseline + text.bounds.y * scaling,
+                text.bounds.width * scaling,
+                text.bounds.height * scaling
             )
             val textTx = AffineTransform().apply {
                 translate(x, csHeight - yBaseline)

@@ -777,25 +777,33 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
         }
 
         override fun materializeText(x: Double, yBaseline: Double, scaling: Double, text: Text, coat: Coat) {
+            val placementTx = AffineTransform().apply {
+                translate(x, yBaseline)
+                scale(scaling)
+            }
+
+            when (coat) {
+                // For plain coats, assemble the text by <use>-ing individual glyphs. This is done by the code below.
+                is Coat.Plain -> {}
+                // For gradient coats, assembly is not possible because each <use> establishes its own coordinate
+                // context, and there's no way of viewing a group of <use> as a singular object and apply the gradient
+                // over the entire thing. The best way out is to represent the text as a single path.
+                is Coat.Gradient -> {
+                    materializeShape(
+                        text.outline.transformedBy(placementTx), coat.transform(placementTx),
+                        fill = true, dash = false, blurRadius = 0.0
+                    )
+                    return
+                }
+            }
+
             val defFontSize = 12.0
             val defToUseScaling = text.fontCase.size / defFontSize
 
-            val textOnlyTx = AffineTransform().apply {
-                scale(defToUseScaling)
-                concatenate(text.manualTransform)
-            }
             val textTx = AffineTransform().apply {
-                translate(x, yBaseline)
-                scale(scaling)
-                concatenate(textOnlyTx)
-            }
-            // Compute the coat transform before processing any glyphs. This way, if this calculation fails, we don't
-            // add orphaned glyph defs that might never be used in the SVG.
-            val coatTx = try {
-                textOnlyTx.createInverse()
-            } catch (_: NoninvertibleTransformException) {
-                // If the transform's determinant is 0, we try to fill a collapsed shape, so just abort.
-                return
+                concatenate(placementTx)
+                concatenate(text.manualTransform)
+                scale(defToUseScaling)
             }
 
             val g = doc.createElementNS(SVG_NS_URI, "g")
@@ -822,9 +830,7 @@ class DeferredImage(var width: Double = 0.0, var height: Y = 0.0.toY()) {
             }
 
             if (g.hasChildNodes()) {
-                // We wait with applying the coat until we are sure that g will actually be added to the tree.
-                // Otherwise, we could end up creating orphaned gradient defs.
-                applyCoat(g, coat.transform(coatTx), fill = true)
+                applyCoat(g, coat, fill = true)
                 svg.appendChild(g)
             }
         }

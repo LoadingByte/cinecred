@@ -51,6 +51,7 @@ Cinecred Changelog
 - JPEG pictures with an EXIF orientation tag are now properly rotated.
 - PNG image sequences with 8-bit palettes can now be ingested.
 - Embedded videos with chroma subsampling no longer prevent interlaced export.
+- Fixed SVG export alignment issues with text gradients and transformed text.
 - Exported PDFs no longer duplicate pictures, thereby reducing file size.
 - PDF export no longer inverts vertical shearing.
 - Video export no longer sometimes misplaces vertical chroma subsamples.

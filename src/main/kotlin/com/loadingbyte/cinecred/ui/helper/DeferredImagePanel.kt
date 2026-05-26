@@ -124,7 +124,9 @@ class DeferredImagePanel(
     private val canvas = CanvasPanel()
     private val xScrollbar = Scrollbar(JScrollBar.HORIZONTAL)
     private val yScrollbar = Scrollbar(JScrollBar.VERTICAL)
+
     private var disableScrollbarListeners = false
+    private var disableRematerialization = false
 
     init {
         add(canvas, "push, grow")
@@ -269,6 +271,8 @@ class DeferredImagePanel(
             xScrollbar.isEnabled = false
             yScrollbar.isEnabled = false
         } else {
+            disableRematerialization = true
+
             // These setters do the coercion and update the scrollbar positions:
             viewportCenterX = viewportCenterX
             viewportCenterY = viewportCenterY
@@ -291,10 +295,15 @@ class DeferredImagePanel(
             // Calling the setters once before and once after is vital to prevent various desyncs we've observed.
             viewportCenterX = viewportCenterX
             viewportCenterY = viewportCenterY
+
+            disableRematerialization = false
         }
     }
 
     private fun rematerialize(contentChanged: Boolean) {
+        if (disableRematerialization)
+            return
+
         val image = this.image
 
         if (image == null || canvas.width == 0 || canvas.height == 0) {
@@ -392,6 +401,7 @@ class DeferredImagePanel(
                     val curImage = this._image
                     val curViewportCenterX = this.viewportCenterX
                     val curViewportCenterY = this.viewportCenterY
+                    disableRematerialization = true
                     this._image = image
                     this.viewportCenterX = viewportCenterX
                     this.viewportCenterY = viewportCenterY
@@ -399,6 +409,7 @@ class DeferredImagePanel(
                     this._image = curImage
                     this.viewportCenterX = curViewportCenterX
                     this.viewportCenterY = curViewportCenterY
+                    disableRematerialization = false
                 }
             }
         }

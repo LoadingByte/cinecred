@@ -770,10 +770,10 @@ class DeferredVideo private constructor(
                         readCrop = embeddedTape.crop
                     }
 
-                    var convertedSpec = origSpec
                     // If the pixel format directly from the source has chroma subsampling, insert a converter stage
                     // to an otherwise equivalent non-subsampled pixel format. This is necessary for interlaced export,
                     // cropping, and reordering, but for simplicity, we simply always do it.
+                    var convertedSpec = origSpec
                     val pixFmt = origSpec.representation.pixelFormat
                     if (pixFmt.hasChromaSub) {
                         val alpha = pixFmt.hasAlpha
@@ -805,20 +805,12 @@ class DeferredVideo private constructor(
                             }
                             else -> if (le) AV_PIX_FMT_YUVA444P16LE else AV_PIX_FMT_YUVA444P16BE  // fallback
                         }
-                        convertedSpec = convertedSpec.copy(
-                            representation = convertedSpec.representation.copy(
+                        convertedSpec = origSpec.copy(
+                            representation = origSpec.representation.copy(
                                 pixelFormat = Bitmap.PixelFormat.of(convertedPixFmtCode),
                                 chromaLocation = AVCHROMA_LOC_UNSPECIFIED
                             )
                         )
-                    }
-                    // If the source yields reversed interleaved fields, and we produce progressive output, flip the
-                    // field coding order now so that we can later reinterpret the interlaced frame as progressive.
-                    if (origSpec.content == Bitmap.Content.INTERLEAVED_FIELDS_REVERSED &&
-                        userSpec.scan == Bitmap.Scan.PROGRESSIVE
-                    )
-                        convertedSpec = convertedSpec.copy(content = Bitmap.Content.INTERLEAVED_FIELDS)
-                    if (convertedSpec !== origSpec) {
                         readConverter = BitmapConverter(origSpec, convertedSpec)
                         readConvertedSpec = convertedSpec
                     }
@@ -894,20 +886,14 @@ class DeferredVideo private constructor(
                 } else {
                     require(!blendInUserColorSpace) { "Interlaced processing does not support user CS blending." }
                     val compositedOverlayRes = resp.embeddedTape.resolution.run { Resolution(widthPx, heightPx / 2) }
-                    val topFieldOverlaySpec: Bitmap.Spec
-                    val botFieldOverlaySpec: Bitmap.Spec
-                    if (readSpec.scan == Bitmap.Scan.PROGRESSIVE) {
-                        topFieldOverlaySpec = Bitmap.Spec(
-                            readSpec.resolution.run { Resolution(widthPx, heightPx / 2) }, readSpec.representation,
-                            Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST, Bitmap.Content.ONLY_TOP_FIELD
-                        )
-                        botFieldOverlaySpec = topFieldOverlaySpec.copy(content = Bitmap.Content.ONLY_BOT_FIELD)
-                    } else
-                        Bitmap.allocate(readSpec).use { dummyBitmap ->
-                            // It is easier to rely on Bitmap's spec inference than to construct these specs ourselves.
-                            topFieldOverlaySpec = dummyBitmap.topFieldView().use { it.spec }
-                            botFieldOverlaySpec = dummyBitmap.botFieldView().use { it.spec }
-                        }
+                    val topFieldOverlaySpec = Bitmap.Spec(
+                        readSpec.resolution.run { Resolution(widthPx, heightPx / 2) },
+                        readSpec.representation,
+                        if (readSpec.scan != Bitmap.Scan.PROGRESSIVE) readSpec.scan else
+                            Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST,
+                        Bitmap.Content.ONLY_TOP_FIELD
+                    )
+                    val botFieldOverlaySpec = topFieldOverlaySpec.copy(content = Bitmap.Content.ONLY_BOT_FIELD)
                     frameOverlayer = null
                     topFieldOverlayer = QualityOverlayer(
                         canvasRep, canvasCeiling, userRep, topFieldOverlaySpec, compositedOverlayRes, usePreview

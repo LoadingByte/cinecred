@@ -1064,21 +1064,12 @@ private fun reinterpretTape(style: TapeStyle): Tape? {
         }
     val scan = if (style.scan.value == null) spec.scan else when (style.scan.value) {
         Scan.PROGRESSIVE -> Bitmap.Scan.PROGRESSIVE
-        Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST,
-        Scan.INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
-            Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST
-        Scan.INTERLACED_BOT_SHOWN_FIRST_AND_TOP_CODED_FIRST,
-        Scan.INTERLACED_BOT_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
-            Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST
+        Scan.INTERLACED_TOP_FIELD_FIRST -> Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST
+        Scan.INTERLACED_BOT_FIELD_FIRST -> Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST
     }
     val content = if (style.scan.value == null) spec.content else when (style.scan.value) {
         Scan.PROGRESSIVE -> Bitmap.Content.PROGRESSIVE_FRAME
-        Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST,
-        Scan.INTERLACED_BOT_SHOWN_FIRST_AND_TOP_CODED_FIRST ->
-            Bitmap.Content.INTERLEAVED_FIELDS
-        Scan.INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST,
-        Scan.INTERLACED_BOT_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
-            Bitmap.Content.INTERLEAVED_FIELDS_REVERSED
+        Scan.INTERLACED_TOP_FIELD_FIRST, Scan.INTERLACED_BOT_FIELD_FIRST -> Bitmap.Content.INTERLEAVED_FIELDS
     }
 
     val colorSpace = ColorSpace.of(primaries, transfer)

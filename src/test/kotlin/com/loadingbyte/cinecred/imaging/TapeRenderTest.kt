@@ -4,7 +4,8 @@ import com.loadingbyte.cinecred.common.FPS
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.imaging.Bitmap.Alpha.OPAQUE
 import com.loadingbyte.cinecred.imaging.Bitmap.Alpha.STRAIGHT
-import com.loadingbyte.cinecred.imaging.Bitmap.Content.*
+import com.loadingbyte.cinecred.imaging.Bitmap.Content.INTERLEAVED_FIELDS
+import com.loadingbyte.cinecred.imaging.Bitmap.Content.PROGRESSIVE_FRAME
 import com.loadingbyte.cinecred.imaging.Bitmap.Scan.*
 import com.loadingbyte.cinecred.imaging.ColorSpace.Companion.SRGB
 import com.loadingbyte.cinecred.imaging.Y.Companion.toY
@@ -100,7 +101,6 @@ internal class TapeRenderTest {
                     val frame = frameBitmap.getI(case.videoWidth, byteOrder = ByteOrder.BIG_ENDIAN)
                     for (x in 0..<case.videoWidth) {
                         val expectedRows = List(case.videoHeight) { y ->
-                            val y = if (case.videoContent == INTERLEAVED_FIELDS_REVERSED) y xor 1 else y
                             if (x in tapeX..<tapeX + case.tapeWidth &&
                                 y in videoFrame.offset..<videoFrame.offset + videoFrame.rows.size
                             )
@@ -288,12 +288,6 @@ internal class TapeRenderTest {
             case.copy(tapeScan = INTERLACED_BOT_FIELD_FIRST, tapeContent = INTERLEAVED_FIELDS)
         )
     }.flatMap { case ->
-        if (case.videoScan == PROGRESSIVE) listOf(case) else
-            listOf(case, case.copy(videoContent = INTERLEAVED_FIELDS_REVERSED))
-    }.flatMap { case ->
-        if (case.tapeScan == PROGRESSIVE) listOf(case) else
-            listOf(case, case.copy(tapeContent = INTERLEAVED_FIELDS_REVERSED))
-    }.flatMap { case ->
         listOf(case, case.copy(tapeCrop = Crop(3, 5, 4, 2)))
     }.flatMap { case ->
         listOf(
@@ -375,8 +369,6 @@ internal class TapeRenderTest {
                     y -= tapeCrop.top
                     if (tapeFlipV)
                         y = tapeHeight - 1 - y
-                    if (tapeContent == INTERLEAVED_FIELDS_REVERSED)
-                        y = y xor 1
                     0xFF or ((1 + frameIdx * tapeHeight + y) shl 8)
                 } else
                     0xFF

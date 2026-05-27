@@ -77,8 +77,7 @@ class TapeTimelineRenderJob private constructor(
             var recIn = formatTimecode(global.fps, global.timecodeFormat, startFrame)
             var recOut = formatTimecode(global.fps, global.timecodeFormat, stopFrame)
             if (scan != Scan.PROGRESSIVE) {
-                val tff = scan == Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST ||
-                        scan == Scan.INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST
+                val tff = scan == Scan.INTERLACED_TOP_FIELD_FIRST
                 recIn += if ((startField % 2 == 0) == tff) " \u25D3" else " \u25D2"
                 recOut += if ((stopField % 2 == 0) == tff) " \u25D3" else " \u25D2"
             }

@@ -412,15 +412,6 @@ class BitmapConverter(
                         if (fmtObj == fmtObjs[toFmt]) {
                             link(BLIT, true, toFmt, pri, trc, pmu, con, res)
                             link(BLIT, false, toFmt, pri, trc, pmu, con, res)
-                            for ((toCon, toConObj) in conObjs.withIndex())
-                                if (conObj == Bitmap.Content.INTERLEAVED_FIELDS &&
-                                    toConObj == Bitmap.Content.INTERLEAVED_FIELDS_REVERSED ||
-                                    conObj == Bitmap.Content.INTERLEAVED_FIELDS_REVERSED &&
-                                    toConObj == Bitmap.Content.INTERLEAVED_FIELDS
-                                ) {
-                                    link(BLIT, true, toFmt, pri, trc, pmu, toCon, res)
-                                    link(BLIT, false, toFmt, pri, trc, pmu, toCon, res)
-                                }
                         }
 
                     // Planar float stage & limited X2RGB10BE stage & SWS stage
@@ -679,16 +670,7 @@ class BitmapConverter(
     private object BlitStage : Stage {
 
         override fun process(src: Bitmap, dst: Bitmap) {
-            val srcC = src.spec.content
-            val dstC = dst.spec.content
-            if (srcC == Bitmap.Content.INTERLEAVED_FIELDS && dstC == Bitmap.Content.INTERLEAVED_FIELDS_REVERSED ||
-                dstC == Bitmap.Content.INTERLEAVED_FIELDS && srcC == Bitmap.Content.INTERLEAVED_FIELDS_REVERSED
-            ) {
-                val (w, h) = src.spec.resolution
-                dst.blit(src, 0, 0, w, h - 1, 0, 1, 2)
-                dst.blit(src, 0, 1, w, h - 1, 0, 0, 2)
-            } else
-                dst.blit(src)
+            dst.blit(src)
         }
 
         override fun close() {}
@@ -1800,7 +1782,7 @@ class BitmapConverter(
                 val content: Bitmap.Content
             )
 
-            private class Graph(val handle: MemorySegment, val srcOffset: Int, val dstOffset: Int, val step: Int)
+            private class Graph(val handle: MemorySegment, val offset: Int, val step: Int)
 
             private val arena = Arena.ofShared()
             private val graphs = mutableListOf<Graph>()
@@ -1816,29 +1798,23 @@ class BitmapConverter(
                 // Build the zimg filter graph(s).
                 val srcC = srcDesc.content
                 val dstC = dstDesc.content
-                if (srcC == Bitmap.Content.INTERLEAVED_FIELDS || srcC == Bitmap.Content.INTERLEAVED_FIELDS_REVERSED ||
-                    dstC == Bitmap.Content.INTERLEAVED_FIELDS || dstC == Bitmap.Content.INTERLEAVED_FIELDS_REVERSED
-                ) {
+                if (srcC == Bitmap.Content.INTERLEAVED_FIELDS || dstC == Bitmap.Content.INTERLEAVED_FIELDS) {
                     var srcTopPar = ZIMG_FIELD_TOP()
                     var dstTopPar = ZIMG_FIELD_TOP()
                     var srcBotPar = ZIMG_FIELD_BOTTOM()
                     var dstBotPar = ZIMG_FIELD_BOTTOM()
-                    var srcTopOffset = if (srcC == Bitmap.Content.INTERLEAVED_FIELDS) 0 else 1
-                    var dstTopOffset = if (dstC == Bitmap.Content.INTERLEAVED_FIELDS) 0 else 1
                     if (srcC == Bitmap.Content.PROGRESSIVE_FRAME) {
                         srcTopPar = ZIMG_FIELD_PROGRESSIVE()
                         srcBotPar = ZIMG_FIELD_PROGRESSIVE()
-                        srcTopOffset = dstTopOffset
                     }
                     if (dstC == Bitmap.Content.PROGRESSIVE_FRAME) {
                         dstTopPar = ZIMG_FIELD_PROGRESSIVE()
                         dstBotPar = ZIMG_FIELD_PROGRESSIVE()
-                        dstTopOffset = srcTopOffset
                     }
-                    graphs += buildGraph(srcTopPar, srcTopOffset, dstTopPar, dstTopOffset, step = 2)
-                    graphs += buildGraph(srcBotPar, 1 - srcTopOffset, dstBotPar, 1 - dstTopOffset, step = 2)
+                    graphs += buildGraph(srcTopPar, dstTopPar, offset = 0, step = 2)
+                    graphs += buildGraph(srcBotPar, dstBotPar, offset = 1, step = 2)
                 } else
-                    graphs += buildGraph(zimgFieldParity(srcC), 0, zimgFieldParity(dstC), 0, step = 1)
+                    graphs += buildGraph(zimgFieldParity(srcC), zimgFieldParity(dstC), offset = 0, step = 1)
 
                 // Populate the buffer structs.
                 srcSeg = zimg_image_buffer_const.allocate(arena)
@@ -1854,12 +1830,10 @@ class BitmapConverter(
                 tmpMem = arena.allocate(graphs.maxOf(::getTmpSize), Bitmap.BYTE_ALIGNMENT.toLong())
             }
 
-            private fun buildGraph(
-                srcFieldParity: Int, srcOffset: Int, dstFieldParity: Int, dstOffset: Int, step: Int
-            ): Graph {
+            private fun buildGraph(srcFieldParity: Int, dstFieldParity: Int, offset: Int, step: Int): Graph {
                 // Populate the format structs.
-                val srcFmt = populateImageFormat(srcDesc, srcFieldParity, srcOffset, step)
-                val dstFmt = populateImageFormat(dstDesc, dstFieldParity, dstOffset, step)
+                val srcFmt = populateImageFormat(srcDesc, srcFieldParity, offset, step)
+                val dstFmt = populateImageFormat(dstDesc, dstFieldParity, offset, step)
                 // Populate the params struct.
                 val params = zimg_graph_builder_params.allocate(arena)
                 zimg_graph_builder_params_default(params, ZIMG_API_VERSION())
@@ -1872,7 +1846,7 @@ class BitmapConverter(
                 // Build the zimg filter graph.
                 val handle = zimg_filter_graph_build(srcFmt, dstFmt, params)
                     .zimgThrowIfNull("Could not build zimg graph")
-                return Graph(handle, srcOffset, dstOffset, step)
+                return Graph(handle, offset, step)
             }
 
             private fun populateImageFormat(desc: Desc, fieldParity: Int, offset: Int, step: Int): MemorySegment {
@@ -1950,7 +1924,7 @@ class BitmapConverter(
                     for ((i, srcComp) in srcDesc.components.withIndex()) {
                         val srcPlane = srcComp.plane
                         val srcStride = src.linesize(srcPlane).toLong()
-                        val srcData = src.memorySegment(srcPlane).asSlice(graph.srcOffset * srcStride)
+                        val srcData = src.memorySegment(srcPlane).asSlice(graph.offset * srcStride)
                         ZIMG_BUF_CONST_DATA.set(srcSeg, 0L, i.toLong(), srcData)
                         ZIMG_BUF_CONST_STRIDE.set(srcSeg, 0L, i.toLong(), graph.step * srcStride)
                     }
@@ -1958,7 +1932,7 @@ class BitmapConverter(
                     for ((i, dstComp) in dstDesc.components.withIndex()) {
                         val dstPlane = dstComp.plane
                         val dstStride = dst.linesize(dstPlane).toLong()
-                        val dstData = dst.memorySegment(dstPlane).asSlice(graph.dstOffset * dstStride)
+                        val dstData = dst.memorySegment(dstPlane).asSlice(graph.offset * dstStride)
                         ZIMG_BUF_DATA.set(dstSeg, 0L, i.toLong(), dstData)
                         ZIMG_BUF_STRIDE.set(dstSeg, 0L, i.toLong(), graph.step * dstStride)
                     }

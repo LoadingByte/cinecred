@@ -381,7 +381,7 @@ object GuideUserInterfaceDeliveryDemo : ScreencastDemo("$DIR/delivery", Format.V
         sc.click()
         sc.mouseTo(prjWin.desktopPosOf(dlvScan))
         sc.click(2 * hold)
-        sc.mouseTo(prjWin.desktopPosOfDropdownItem(Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST))
+        sc.mouseTo(prjWin.desktopPosOfDropdownItem(Scan.INTERLACED_TOP_FIELD_FIRST))
         sc.click()
         sc.mouseTo(prjWin.desktopPosOf(dlvPrimaries))
         sc.click()

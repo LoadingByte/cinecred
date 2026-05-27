@@ -169,13 +169,17 @@ class VideoReader(
                 if (pixelFormat.hasAlpha) Bitmap.Alpha.STRAIGHT else Bitmap.Alpha.OPAQUE
             ),
             when (dec.field_order()) {
-                AV_FIELD_TT, AV_FIELD_BT -> Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST
-                AV_FIELD_BB, AV_FIELD_TB -> Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST
+                // Despite what the documentation of these constants says, the first letter actually determines the
+                // display order. This is confirmed by various discussions on the mailing list, and by how FFmpeg itself
+                // uses these constants.
+                AV_FIELD_TT, AV_FIELD_TB -> Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST
+                AV_FIELD_BB, AV_FIELD_BT -> Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST
                 else -> Bitmap.Scan.PROGRESSIVE
             },
             when (dec.field_order()) {
-                AV_FIELD_TT, AV_FIELD_TB -> Bitmap.Content.INTERLEAVED_FIELDS
-                AV_FIELD_BB, AV_FIELD_BT -> Bitmap.Content.INTERLEAVED_FIELDS_REVERSED
+                // The "coded first" phrasing in the documentation of these constants has nothing to do with how the
+                // fields are physically interleaved; instead, FFmpeg always interleaves the top field first.
+                AV_FIELD_TT, AV_FIELD_BB, AV_FIELD_TB, AV_FIELD_BT -> Bitmap.Content.INTERLEAVED_FIELDS
                 else -> Bitmap.Content.PROGRESSIVE_FRAME
             }
         )

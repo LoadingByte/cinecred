@@ -107,21 +107,12 @@ class VideoContainerRenderJob private constructor(
             ),
             scan = when (scan) {
                 Scan.PROGRESSIVE -> Bitmap.Scan.PROGRESSIVE
-                Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST,
-                Scan.INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
-                    Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST
-                Scan.INTERLACED_BOT_SHOWN_FIRST_AND_TOP_CODED_FIRST,
-                Scan.INTERLACED_BOT_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
-                    Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST
+                Scan.INTERLACED_TOP_FIELD_FIRST -> Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST
+                Scan.INTERLACED_BOT_FIELD_FIRST -> Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST
             },
             content = when (scan) {
                 Scan.PROGRESSIVE -> Bitmap.Content.PROGRESSIVE_FRAME
-                Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST,
-                Scan.INTERLACED_BOT_SHOWN_FIRST_AND_TOP_CODED_FIRST ->
-                    Bitmap.Content.INTERLEAVED_FIELDS
-                Scan.INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST,
-                Scan.INTERLACED_BOT_SHOWN_FIRST_AND_BOT_CODED_FIRST ->
-                    Bitmap.Content.INTERLEAVED_FIELDS_REVERSED
+                Scan.INTERLACED_TOP_FIELD_FIRST, Scan.INTERLACED_BOT_FIELD_FIRST -> Bitmap.Content.INTERLEAVED_FIELDS
             }
         )
 

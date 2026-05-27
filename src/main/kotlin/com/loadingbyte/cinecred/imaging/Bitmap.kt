@@ -163,13 +163,7 @@ class Bitmap private constructor(
                 evenYSkip && evenY -> Content.ONLY_TOP_FIELD
                 evenYSkip && !evenY -> Content.ONLY_BOT_FIELD
                 !evenYSkip && evenY -> Content.INTERLEAVED_FIELDS
-                else -> Content.INTERLEAVED_FIELDS_REVERSED
-            }
-            Content.INTERLEAVED_FIELDS_REVERSED -> when {
-                evenYSkip && evenY -> Content.ONLY_BOT_FIELD
-                evenYSkip && !evenY -> Content.ONLY_TOP_FIELD
-                !evenYSkip && evenY -> Content.INTERLEAVED_FIELDS_REVERSED
-                else -> Content.INTERLEAVED_FIELDS
+                else -> throw IllegalArgumentException("Under interlacing, the top view coordinate $y must be even.")
             }
             else -> spec.content
         }
@@ -191,7 +185,6 @@ class Bitmap private constructor(
     fun topFieldView(): Bitmap =
         when (spec.content) {
             Content.INTERLEAVED_FIELDS -> view(0, 0, spec.resolution.widthPx, spec.resolution.heightPx, 2)
-            Content.INTERLEAVED_FIELDS_REVERSED -> view(0, 1, spec.resolution.widthPx, spec.resolution.heightPx - 1, 2)
             else -> throw IllegalArgumentException("Cannot get top field view as bitmap is not interleaved fields.")
         }
 
@@ -199,7 +192,6 @@ class Bitmap private constructor(
     fun botFieldView(): Bitmap =
         when (spec.content) {
             Content.INTERLEAVED_FIELDS -> view(0, 1, spec.resolution.widthPx, spec.resolution.heightPx - 1, 2)
-            Content.INTERLEAVED_FIELDS_REVERSED -> view(0, 0, spec.resolution.widthPx, spec.resolution.heightPx, 2)
             else -> throw IllegalArgumentException("Cannot get bottom field view as bitmap is not interleaved fields.")
         }
 
@@ -636,7 +628,7 @@ class Bitmap private constructor(
                 // If the video is interlaced, mark the frame that we send to the encoder accordingly.
                 // If the field order is bff, but we don't specify that for every single frame, the resulting file would
                 // have an additional (and wrong) metadata entry showing "original scan order = tff".
-                if (spec.scan != Scan.PROGRESSIVE) {
+                if (spec.content == Content.INTERLEAVED_FIELDS) {
                     var flags = AV_FRAME_FLAG_INTERLACED
                     if (spec.scan == Scan.INTERLACED_TOP_FIELD_FIRST)
                         flags = flags or AV_FRAME_FLAG_TOP_FIELD_FIRST
@@ -922,10 +914,8 @@ class Bitmap private constructor(
         ONLY_TOP_FIELD,
         /** The bitmap contains only the bottom field of an interlaced frame. */
         ONLY_BOT_FIELD,
-        /** The bitmap contains both fields of an interlaced frame, with the top field coded first. */
-        INTERLEAVED_FIELDS,
-        /** The bitmap contains both fields of an interlaced frame, with the bottom field coded first. */
-        INTERLEAVED_FIELDS_REVERSED
+        /** The bitmap contains both fields of an interlaced frame, interleaved in the order top, bottom, top... */
+        INTERLEAVED_FIELDS
     }
 
 

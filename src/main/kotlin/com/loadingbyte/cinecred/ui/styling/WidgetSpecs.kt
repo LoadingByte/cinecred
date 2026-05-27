@@ -595,14 +595,8 @@ private val TAPE_STYLE_WIDGET_SPECS: List<StyleWidgetSpec<TapeStyle, *>> = listO
             val spec = tapeSpec(style)
             when (spec?.scan) {
                 Bitmap.Scan.PROGRESSIVE, null -> Scan.PROGRESSIVE
-                Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST -> when (spec.content) {
-                    Bitmap.Content.INTERLEAVED_FIELDS_REVERSED -> Scan.INTERLACED_TOP_SHOWN_FIRST_AND_BOT_CODED_FIRST
-                    else -> Scan.INTERLACED_TOP_SHOWN_FIRST_AND_TOP_CODED_FIRST
-                }
-                Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST -> when (spec.content) {
-                    Bitmap.Content.INTERLEAVED_FIELDS_REVERSED -> Scan.INTERLACED_BOT_SHOWN_FIRST_AND_BOT_CODED_FIRST
-                    else -> Scan.INTERLACED_BOT_SHOWN_FIRST_AND_TOP_CODED_FIRST
-                }
+                Bitmap.Scan.INTERLACED_TOP_FIELD_FIRST -> Scan.INTERLACED_TOP_FIELD_FIRST
+                Bitmap.Scan.INTERLACED_BOT_FIELD_FIRST -> Scan.INTERLACED_BOT_FIELD_FIRST
             }
         }
     )

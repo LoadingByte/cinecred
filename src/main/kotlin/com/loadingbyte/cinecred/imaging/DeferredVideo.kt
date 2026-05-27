@@ -360,11 +360,6 @@ class DeferredVideo private constructor(
                 userData.close()
         }
 
-        fun preloadFrame(frameIdx: Int) {
-            check(randomAccessDraftMode) { "Frame preloading is only supported in random access mode." }
-            pageCache.query(frameIdx)
-        }
-
         private var lastFrameIdx = -1
 
         /** The returned bitmap is permitted to be [Bitmap.close]d, but must not be modified. */

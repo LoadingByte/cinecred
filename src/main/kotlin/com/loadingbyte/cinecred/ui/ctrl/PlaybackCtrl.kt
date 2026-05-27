@@ -594,7 +594,7 @@ class PlaybackCtrl : PlaybackCtrlComms {
             // Simulate materializing the currently selected frame while the FrameBuffer is being constructed in a
             // background thread. As expensive operations are cached, the subsequent materialization of that frame in
             // another thread will be very fast.
-            videoBackend?.preloadFrame(preloadFrameIdx)
+            videoBackend?.materializeFrame(preloadFrameIdx)
         }
 
         fun materializeFrame(frameIdx: Int): F? {

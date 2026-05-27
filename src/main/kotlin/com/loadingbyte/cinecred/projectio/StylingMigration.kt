@@ -363,11 +363,12 @@ fun migrateStylingFrom170(ctx: StylingReaderContext, rawStyling: RawStyling) {
 
 
 fun migrateStylingFrom181(ctx: StylingReaderContext, rawStyling: RawStyling) {
-    // 1.8.1 -> 1.9.0: Flow lines are now called rows.
+    // 1.8.1 -> 1.9.0: Flow lines are now called rows, and the HGap is now called HCellGap.
     for (contentStyle in rawStyling.contentStyles) {
         contentStyle["flowLineHJustify"]?.let { contentStyle["flowRowHJustify"] = it }
         contentStyle["flowLineWidthPx"]?.let { contentStyle["flowRowWidthPx"] = it }
         contentStyle["flowLineGapPx"]?.let { contentStyle["flowRowGapPx"] = it }
+        contentStyle["flowHGapPx"]?.let { contentStyle["flowCellHGapPx"] = it }
     }
 
     // 1.8.1 -> 1.9.0: Vertical head/tail justification is now phrased in terms of vertical fragments.

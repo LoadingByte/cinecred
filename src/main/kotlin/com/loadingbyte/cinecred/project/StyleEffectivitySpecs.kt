@@ -94,7 +94,7 @@ private val CONTENT_STYLE_EFFECTIVITY_SPECS: List<StyleEffectivitySpec<ContentSt
         ContentStyle::flowHarmonizeCellHeight.st(), ContentStyle::flowHarmonizeCellHeightAcrossStyles.st(),
         ContentStyle::flowCellHJustify.st(), ContentStyle::flowCellVJustify.st(),
         ContentStyle::flowTextVJustifyFragments.st(), ContentStyle::flowTextVJustify.st(),
-        ContentStyle::flowRowWidthPx.st(), ContentStyle::flowRowGapPx.st(), ContentStyle::flowHGapPx.st(),
+        ContentStyle::flowRowWidthPx.st(), ContentStyle::flowRowGapPx.st(), ContentStyle::flowCellHGapPx.st(),
         ContentStyle::flowSeparator.st(),
         ContentStyle::flowSeparatorLetterStyleName.st(), ContentStyle::flowSeparatorVJustify.st(),
         isTotallyIneffective = { _, style -> style.bodyLayout != FLOW }

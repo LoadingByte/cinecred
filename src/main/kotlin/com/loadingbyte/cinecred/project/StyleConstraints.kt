@@ -178,7 +178,7 @@ private val CONTENT_STYLE_CONSTRAINTS: List<StyleConstraint<ContentStyle, *>> = 
     },
     DoubleConstr(ERROR, ContentStyle::flowRowWidthPx.st(), min = 0.0, minInclusive = false),
     DoubleConstr(ERROR, ContentStyle::flowRowGapPx.st(), min = 0.0),
-    DoubleConstr(ERROR, ContentStyle::flowHGapPx.st(), min = 0.0),
+    DoubleConstr(ERROR, ContentStyle::flowCellHGapPx.st(), min = 0.0),
     StyledStringConstr(WARN, ContentStyle::flowSeparator.st()) { _, style ->
         style.flowSeparatorLetterStyleName.orElse { style.bodyLetterStyleName }
     },

@@ -218,13 +218,13 @@ object GuideContentStyleFlowLayoutRowWidthDemo : StyleSettingsDemo<ContentStyle>
 
 object GuideContentStyleFlowLayoutRowGapAndHGapDemo : StyleSettingsDemo<ContentStyle>(
     ContentStyle::class.java, "$DIR/row-gap-and-hgap", Format.STEP_GIF,
-    listOf(ContentStyle::flowRowGapPx.st(), ContentStyle::flowHGapPx.st()), pageGuides = true
+    listOf(ContentStyle::flowRowGapPx.st(), ContentStyle::flowCellHGapPx.st()), pageGuides = true
 ) {
     override fun styles() = buildList<ContentStyle> {
         this += bulletsCS.copy(name = "Demo")
         this += last().copy(flowRowGapPx = 32.0)
         this += last().copy(flowRowGapPx = 64.0)
-        this += last().copy(flowHGapPx = 64.0)
+        this += last().copy(flowCellHGapPx = 64.0)
     }
 
     override fun credits(style: ContentStyle) = FLOW_SPREADSHEET.parseCreditsCS(style)
@@ -278,7 +278,7 @@ object GuideContentStyleFlowLayoutSeparatorVJustifyDemo : StyleSettingsDemo<Cont
 
 
 private val bulletsCS = PRESET_CONTENT_STYLE.copy(
-    bodyLetterStyleName = "Name", bodyLayout = BodyLayout.FLOW, flowRowWidthPx = 600.0, flowHGapPx = 32.0
+    bodyLetterStyleName = "Name", bodyLayout = BodyLayout.FLOW, flowRowWidthPx = 600.0, flowCellHGapPx = 32.0
 )
 private val sepClr = Color4f.fromSRGBHexString("#42BEEF")
 

@@ -152,7 +152,7 @@ data class ContentStyle(
     val flowTextVJustify: VJustifyText,
     val flowRowWidthPx: Double,
     val flowRowGapPx: Double,
-    val flowHGapPx: Double,
+    val flowCellHGapPx: Double,
     val flowSeparator: String,
     val flowSeparatorLetterStyleName: Opt<String>,
     val flowSeparatorVJustify: VJustifyText,

@@ -349,7 +349,7 @@ private fun drawBodyImagesWithFlowBodyLayout(
         val s = block.style
         val sharedCellWidth = sharedCellWidthPerBlock[block]
         return flowIntoRows(
-            sort(styling, block.body, s.sort), s.flowDirection, s.flowRowWidthPx, s.flowHGapPx
+            sort(styling, block.body, s.sort), s.flowDirection, s.flowRowWidthPx, s.flowCellHGapPx
         ) { bodyElem ->
             sharedCellWidth?.value ?: bodyElem.getWidth(styling)
         }
@@ -409,7 +409,7 @@ private fun drawBodyImageWithFlowBodyLayout(
     sharedCellHeight: Extent?
 ): DrawnBody {
     val style = block.style
-    val horGap = style.flowHGapPx
+    val horGap = style.flowCellHGapPx
 
     val sepLetterStyleName = style.flowSeparatorLetterStyleName.orElse { style.bodyLetterStyleName }
     val sepLetterStyle = styling.letterStyles.find { it.name == sepLetterStyleName } ?: PLACEHOLDER_LETTER_STYLE

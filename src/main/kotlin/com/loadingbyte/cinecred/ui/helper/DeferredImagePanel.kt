@@ -1,6 +1,7 @@
 package com.loadingbyte.cinecred.ui.helper
 
 import com.formdev.flatlaf.ui.FlatUIUtils
+import com.formdev.flatlaf.util.SystemInfo
 import com.loadingbyte.cinecred.common.JobSlot
 import com.loadingbyte.cinecred.common.Resolution
 import com.loadingbyte.cinecred.common.l10n
@@ -163,10 +164,16 @@ class DeferredImagePanel(
         // Hovering over the canvas should always display a move cursor.
         canvas.cursor = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)
 
-        // When the user scrolls inside the canvas, scroll the viewport or adjust the zoom.
-        canvas.addMouseWheelListener { e ->
+        // When the user scrolls inside the canvas or over the scrollbars, scroll the viewport or adjust the zoom.
+        addMouseWheelListener { e ->
             val block = e.scrollType == WHEEL_BLOCK_SCROLL
-            val mult = if (block) e.wheelRotation.sign.toDouble() else e.preciseWheelRotation * e.scrollAmount
+            val mult = when {
+                block -> e.wheelRotation.sign.toDouble()
+                else -> e.preciseWheelRotation * e.scrollAmount *
+                        // On Windows, wheel rotation is divided by the UI scale factor, which however makes scrolling
+                        // the image unnaturally slow. Hence, we compensate by multiplying by the scale factor again.
+                        if (SystemInfo.isWindows) getSystemScaleFactor(graphicsConfiguration) else 1.0
+            }
             if (e.modifiersEx == CTRL_DOWN_MASK)
                 zoom -= zoomIncrement * mult
             else {

@@ -860,7 +860,7 @@ class DeferredVideo private constructor(
 
             // When this bitmap is initialized, it will exactly match readSpec,
             // so it'll be a drop-in replacement for the actual tape frames.
-            private val missingMediaBitmap by lazy {
+            private val missingMediaBitmap = lazy {
                 val mmBitmap = Bitmap.allocate(readSpec)
                 val rep = Canvas.compatibleRepresentation(ColorSpace.SRGB)
                 Bitmap.allocate(Bitmap.Spec(readSpec.resolution, rep)).use { canvasBitmap ->
@@ -955,6 +955,8 @@ class DeferredVideo private constructor(
                 if (source == Source.READER)
                     reader.close()
                 readConverter?.close()
+                if (missingMediaBitmap.isInitialized())
+                    missingMediaBitmap.value.close()
                 frameOverlayer?.close()
                 topFieldOverlayer?.close()
                 botFieldOverlayer?.close()

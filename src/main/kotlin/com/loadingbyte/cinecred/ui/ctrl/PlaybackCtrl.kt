@@ -503,7 +503,7 @@ class PlaybackCtrl : PlaybackCtrlComms {
     }
 
     override fun scrub(frameIdx: Int) {
-        if (!visible && selectedDeckLink == null)
+        if (!visible && selectedDeckLink == null || this.frameIdx == frameIdx)
             return
         this.frameIdx = frameIdx
         if (playRate == 0) {

@@ -702,7 +702,7 @@ class DeferredVideo private constructor(
         private fun dropTapeUserData(resp: TapeTracker.Response<TapeUserData>, frameIdx: Int) {
             // Close the reader early and dereference the user data if we no longer need it. Notice that in case of
             // errors, the close() function on this object will be called and will close all remaining readers.
-            if (frameIdx >= /* use >= instead of == just to be sure */ resp.lastFrameIdx) {
+            if (!randomAccessDraftMode && frameIdx >= /* use >= instead of == just to be sure */ resp.lastFrameIdx) {
                 resp.userData?.close()
                 resp.userData = null
             }

@@ -569,6 +569,8 @@ class ProjectController(
             PREVIEW_SWITCH_CREDITS_TAB_RIGHT -> previewCtrl.switchCreditsTab(true)
             PREVIEW_SWITCH_PAGE_TAB_LEFT -> previewCtrl.switchPageTab(false)
             PREVIEW_SWITCH_PAGE_TAB_RIGHT -> previewCtrl.switchPageTab(true)
+            PREVIEW_SCROLL_PAGE_UP -> previewCtrl.scrollBlock(false)
+            PREVIEW_SCROLL_PAGE_DOWN -> previewCtrl.scrollBlock(true)
 
             PLAYBACK_REWIND -> playbackCtrl.rewind()
             PLAYBACK_PAUSE -> playbackCtrl.pause()

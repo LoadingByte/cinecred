@@ -55,6 +55,7 @@ class PreviewCtrl(private val projectCtrl: ProjectController) : PreviewCtrlComms
     override fun switchCreditsBookTab(right: Boolean) = views.forEach { view -> view.switchCreditsBookTab(right) }
     override fun switchCreditsTab(right: Boolean) = views.forEach { view -> view.switchCreditsTab(right) }
     override fun switchPageTab(right: Boolean) = views.forEach { view -> view.switchPageTab(right) }
+    override fun scrollBlock(down: Boolean) = views.forEach { view -> view.scrollBlock(down) }
     override fun setZoom(zoom: Double) = views.forEach { view -> view.setZoom(zoom) }
 
     override fun setAvailableOverlays(availableOverlays: List<Overlay>) {

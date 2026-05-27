@@ -15,6 +15,7 @@ import com.loadingbyte.cinecred.ui.helper.*
 import net.miginfocom.swing.MigLayout
 import java.awt.CardLayout
 import java.awt.Dimension
+import java.awt.event.MouseWheelEvent
 import javax.swing.*
 import javax.swing.JTabbedPane.SCROLL_TAB_LAYOUT
 
@@ -76,6 +77,7 @@ class PreviewDockable(private val previewCtrl: PreviewCtrlComms) :
 
     private val selectedCreditsTabs get() = creditsBookTabs.selectedComponent as JTabbedPane
     private val selectedPageTabs get() = selectedCreditsTabs.selectedComponent as JTabbedPane
+    private val selectedImagePanel get() = selectedPageTabs.selectedComponent as DeferredImagePanel
 
     // Utility to quickly get all DeferredImagePanels of all credits spreadsheets.
     private val imagePanels: List<DeferredImagePanel>
@@ -185,6 +187,15 @@ class PreviewDockable(private val previewCtrl: PreviewCtrlComms) :
     override fun switchCreditsBookTab(right: Boolean) = switch(creditsBookTabs, right)
     override fun switchCreditsTab(right: Boolean) = switch(selectedCreditsTabs, right)
     override fun switchPageTab(right: Boolean) = switch(selectedPageTabs, right)
+
+    override fun scrollBlock(down: Boolean) {
+        val panel = selectedImagePanel
+        val e = MouseWheelEvent(
+            panel, MouseWheelEvent.MOUSE_WHEEL, System.currentTimeMillis(), 0, 0, 0, 0, false,
+            MouseWheelEvent.WHEEL_BLOCK_SCROLL, 1, if (down) 1 else -1
+        )
+        panel.dispatchEvent(e)
+    }
 
     override fun setZoom(zoom: Double) {
         this.zoom = zoom

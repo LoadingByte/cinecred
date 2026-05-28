@@ -30,12 +30,6 @@ class WelcomeFrame(private val welcomeCtrl: WelcomeCtrlComms) : CcFrame(l10n("ui
         defaultCloseOperation = DO_NOTHING_ON_CLOSE
 
         addWindowListener(object : WindowAdapter() {
-            override fun windowOpened(e: WindowEvent) {
-                // Due to the card layout inside the panel, the focus is initially "lost" somewhere, and hence tabbing
-                // has no effect. By calling this method, we make the focus available again.
-                requestFocusInWindow()
-            }
-
             override fun windowClosing(e: WindowEvent) {
                 welcomeCtrl.close()
             }

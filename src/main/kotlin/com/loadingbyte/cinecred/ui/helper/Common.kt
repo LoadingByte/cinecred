@@ -527,7 +527,7 @@ class LabeledListCellRenderer<E>(
 open class CcFrame(title: String = "") : JFrame(title) {
 
     init {
-        iconImages = WINDOW_ICON_IMAGES
+        setupWindow(this)
     }
 
     @Deprecated("")
@@ -539,7 +539,7 @@ open class CcFrame(title: String = "") : JFrame(title) {
 open class CcDialog(owner: Frame) : JDialog(owner) {
 
     init {
-        iconImages = WINDOW_ICON_IMAGES
+        setupWindow(this)
         // On macOS, enable the system-native full-screen buttons also for dialogs.
         if (SystemInfo.isMacOS)
             setWindowCanFullScreenMacOS(this, true)
@@ -549,6 +549,18 @@ open class CcDialog(owner: Frame) : JDialog(owner) {
     @Suppress("DEPRECATION")
     override fun show() = showPreventingPartialMaximizationFlag(this) { super.show() }
 
+}
+
+private fun setupWindow(window: Window) {
+    window.iconImages = WINDOW_ICON_IMAGES
+    window.addWindowListener(object : WindowAdapter() {
+        override fun windowOpened(e: WindowEvent) {
+            // When a window is opened, the first component inside it usually gets focused. We don't want this, so by
+            // making the window itself request focus, we clear the focus. The user can still press tab to start the
+            // focus cycle.
+            window.requestFocusInWindow()
+        }
+    })
 }
 
 private fun showPreventingPartialMaximizationFlag(window: Window, superShow: () -> Unit) {

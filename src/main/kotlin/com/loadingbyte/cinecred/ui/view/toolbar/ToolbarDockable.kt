@@ -17,6 +17,7 @@ import java.awt.datatransfer.StringSelection
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.*
+import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -75,9 +76,19 @@ class ToolbarDockable(private val toolbarCtrl: ToolbarCtrlComms, playbackCtrl: P
         putClientProperty(STYLE_CLASS, "small")
     }
 
-    private val zoomSlider = ZoomSlider().apply {
-        isFocusable = false
-        addChangeListener { toolbarCtrl.onChangeZoom(zoom) }
+    private val zoomScrubber = Scrubber(
+        Scrubber.NumericScheme(
+            Double::class.javaObjectType, precision = 0, unit = "%", multiplier = 100.0, logStep = true
+        )
+    ).apply {
+        value = 1.0
+        limiter = Scrubber.NumberLimiter(MIN_ZOOM, MAX_ZOOM)
+        sensitivity = 0.1 * log10(ZOOM_FACTOR)
+        addValueListener { toolbarCtrl.onChangeZoom(value) }
+        // Perfectly size the scrubber by finding the maximum possible string width.
+        val maxStringWidth = (0..9).maxOf { getFontMetrics(font).stringWidth(('0' + it).toString().repeat(3) + " %") }
+        preferredSize = Dimension(maxStringWidth + insets.run { left + right } + 2 /* buffer */, preferredSize.height)
+        minimumSize = Dimension(0, 0)
     }
 
     private val guidesToggleButton = newToolbarToggleButton(
@@ -154,7 +165,7 @@ class ToolbarDockable(private val toolbarCtrl: ToolbarCtrlComms, playbackCtrl: P
 
         val zoomTooltip = l10n("ui.edit.zoom") + " (" +
                 l10nEnum(TOOLBAR_ZOOM_IN.hint, TOOLBAR_ZOOM_OUT.hint, TOOLBAR_ZOOM_RESET.hint) + ")"
-        zoomSlider.toolTipText = zoomTooltip
+        zoomScrubber.toolTipText = zoomTooltip
 
         val runtimeDescLabel = JLabel(l10n("ui.edit.runtime")).apply {
             toolTipText = text
@@ -165,7 +176,7 @@ class ToolbarDockable(private val toolbarCtrl: ToolbarCtrlComms, playbackCtrl: P
                 6[]6
                 []0[]0[]0[]6[]
                 12[]12
-                []6[]6[]0[]
+                []6[]0[]
         """
         val row1 = JPanel(MigLayout("insets 0", row1Cols)).apply {
             add(pollCreditsButton)
@@ -178,8 +189,7 @@ class ToolbarDockable(private val toolbarCtrl: ToolbarCtrlComms, playbackCtrl: P
             add(resetStylingButton)
             add(unsavedStylingLabel)
             add(JSeparator(JSeparator.VERTICAL), "growy")
-            add(JLabel(ZOOM_ICON).apply { toolTipText = zoomTooltip })
-            add(zoomSlider, "width 50")
+            add(zoomScrubber)
             add(guidesToggleButton)
             add(overlaysButton)
         }
@@ -300,7 +310,7 @@ class ToolbarDockable(private val toolbarCtrl: ToolbarCtrlComms, playbackCtrl: P
 
     // @formatter:off
     override fun setPlaybackControlsVisible(visible: Boolean) { playbackControls.isVisible = visible }
-    override fun setZoom(zoom: Double) { zoomSlider.zoom = zoom }
+    override fun setZoom(zoom: Double) { zoomScrubber.value = zoom.coerceIn(MIN_ZOOM, MAX_ZOOM) }
     override fun toggleGuides() { guidesToggleButton.isSelected = !guidesToggleButton.isSelected }
     override fun toggleOverlaysMenu() = overlaysMenu.toggle()
     // @formatter:on
@@ -406,17 +416,6 @@ class ToolbarDockable(private val toolbarCtrl: ToolbarCtrlComms, playbackCtrl: P
         private val Container.row1 get() = getComponent(0)
         private val Container.row2 get() = getComponent(1)
         private val Container.sep get() = getComponent(2)
-
-    }
-
-
-    private class ZoomSlider : JSlider(0, MAX_ZOOM * 100, 0) {
-
-        var zoom: Double
-            get() = 1.0 + value * (MAX_ZOOM - 1.0) / maximum
-            set(newZoom) {
-                value = ((newZoom - 1.0) * maximum / (MAX_ZOOM - 1.0)).roundToInt()
-            }
 
     }
 

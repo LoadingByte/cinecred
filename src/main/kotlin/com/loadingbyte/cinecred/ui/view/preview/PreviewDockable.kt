@@ -115,8 +115,6 @@ class PreviewDockable(private val previewCtrl: PreviewCtrlComms) :
         while (parentTabs.tabCount < tabCount) {
             val childTabs = JTabbedPane()
             configure(childTabs)
-            if (creditsTabs)
-                childTabs.putClientProperty(TABBED_PANE_SHOW_CONTENT_SEPARATOR, false)
             childTabs.addChangeListener {
                 if (!creditsTabs)
                     previewCtrl.sendSelectedDrawnCredits(selectedDrawnCreditsBook, selectedDrawnCredits)
@@ -136,7 +134,7 @@ class PreviewDockable(private val previewCtrl: PreviewCtrlComms) :
             val pageNumber = pageTabs.tabCount + 1
             val tabTitle = if (pageTabs.tabCount == 0) l10n("ui.edit.page", pageNumber) else pageNumber.toString()
             val imagePanel =
-                DeferredImagePanel(MAX_ZOOM.toDouble(), ZOOM_INCREMENT, highResCache, lowResCache).apply {
+                DeferredImagePanel(MIN_ZOOM, MAX_ZOOM, ZOOM_FACTOR, highResCache, lowResCache).apply {
                     zoom = this@PreviewDockable.zoom
                     zoomListeners.add(previewCtrl::sendZoomChange)
                 }

@@ -19,6 +19,7 @@ import javax.swing.text.DefaultFormatterFactory
 import javax.swing.text.NumberFormatter
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.pow
 
 
 class Scrubber<T : Any>(scheme: Scheme<T>) : JFormattedTextField() {
@@ -167,7 +168,8 @@ class Scrubber<T : Any>(scheme: Scheme<T>) : JFormattedTextField() {
         val valueClass: Class<T>,
         val precision: Int = 3,
         val unit: String? = null,
-        val multiplier: T? = null
+        val multiplier: T? = null,
+        val logStep: Boolean = false
     ) : Scheme<T> {
 
         override fun createFormatterFactory(scrubber: Scrubber<T>): AbstractFormatterFactory {
@@ -189,8 +191,11 @@ class Scrubber<T : Any>(scheme: Scheme<T>) : JFormattedTextField() {
         override fun cast(value: Any): T = valueClass.cast(value)
         override fun zero() = valueClass.convert(0)
 
-        override fun step(value: T, steps: Double) =
-            value + value::class.javaObjectType.convert(steps).let { if (multiplier == null) it else it / multiplier }
+        override fun step(value: T, steps: Double): T =
+            when (logStep) {
+                false -> value + valueClass.convert(steps).let { if (multiplier == null) it else it / multiplier }
+                true -> value * valueClass.convert(10.0.pow(steps))
+            }
 
         private class Formatter<T : Number>(
             private val scrubber: Scrubber<T>,

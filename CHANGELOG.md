@@ -31,6 +31,8 @@ Cinecred Changelog
 - The levels, color space, alpha type, and interlacing of embedded videos may
   now be overridden in case the metadata is wrong.
 - The preview resolution of embedded videos is now configurable.
+- The still preview may now be zoomed out further than the point of filling the
+  available width, which allows to view a large chunk of the credits at once.
 - The credits runtime can now be copied to the clipboard by clicking on it.
 - Overridable quantities like total runtime or picture width now continuously
   update in the UI while they are not overridden.

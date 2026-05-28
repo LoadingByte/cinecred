@@ -122,7 +122,7 @@ class ToolbarCtrl(private val projectCtrl: ProjectController) : ToolbarCtrlComms
     }
 
     override fun setZoom(zoom: Double) = views.forEach { view -> view.setZoom(zoom) }
-    override fun zoom(zoomIn: Boolean) = setZoom(zoom + if (zoomIn) ZOOM_INCREMENT else -ZOOM_INCREMENT)
+    override fun zoom(zoomIn: Boolean) = setZoom(if (zoomIn) zoom * ZOOM_FACTOR else zoom / ZOOM_FACTOR)
     override fun toggleGuides() = views.forEach { view -> view.toggleGuides() }
     override fun toggleOverlaysMenu() = views.forEach { view -> view.toggleOverlaysMenu() }
     override fun flashWindowLayoutLockedButton() = views.forEach { view -> view.flashWindowLayoutLockedButton() }

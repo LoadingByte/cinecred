@@ -238,6 +238,61 @@ fun Component.addThresholdedStartDragListener(startDragging: (MouseEvent) -> Uni
 }
 
 
+interface HighFrequencyDragListener {
+    fun onStartDragging(startPointer: Point): Boolean = true
+    fun onStopDragging() {}
+    fun onDrag(startPointer: Point, currentPointer: Point, modifiersEx: Int)
+}
+
+fun Component.addHighFrequencyDragListener(listener: HighFrequencyDragListener) {
+    val mouseListener = object : MouseAdapter() {
+        private var startPointer = Point()
+        private var previousPointer = Point()
+        private var dragging = false
+        private var modifiersEx = 0
+
+        private val timer = Timer(10) {
+            val currentPointer = MouseInfo.getPointerInfo().location
+            SwingUtilities.convertPointFromScreen(currentPointer, this@addHighFrequencyDragListener)
+            if (previousPointer != currentPointer) {
+                previousPointer = currentPointer
+                listener.onDrag(Point(startPointer), currentPointer, modifiersEx)
+            }
+        }
+
+        override fun mousePressed(e: MouseEvent) {
+            modifiersEx = e.modifiersEx
+            if (SwingUtilities.isLeftMouseButton(e)) {
+                startPointer = e.point
+                previousPointer = startPointer
+            }
+        }
+
+        override fun mouseDragged(e: MouseEvent) {
+            modifiersEx = e.modifiersEx
+            // Note: We only start dragging if an AWT drag event occurs to make sure that our dragging and AWT click
+            // events continue to be mutually exclusive.
+            if (SwingUtilities.isLeftMouseButton(e) && !dragging && listener.onStartDragging(startPointer)) {
+                dragging = true
+                timer.start()
+            }
+        }
+
+        override fun mouseReleased(e: MouseEvent) {
+            modifiersEx = e.modifiersEx
+            if (SwingUtilities.isLeftMouseButton(e) && dragging) {
+                dragging = false
+                timer.stop()
+                listener.onStopDragging()
+            }
+        }
+    }
+
+    addMouseListener(mouseListener)
+    addMouseMotionListener(mouseListener)
+}
+
+
 /** Should be implemented by wrapper objects that are put into combo boxes. It's expected by the demo code. */
 interface ComboBoxWrapper {
     val item: Any

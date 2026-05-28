@@ -1682,37 +1682,26 @@ class TransitionWidget : Form.AbstractWidget<Transition>() {
         init {
             preferredSize = Dimension(300, 300)
 
-            val mouseListener = object : MouseAdapter() {
+            addHighFrequencyDragListener(object : HighFrequencyDragListener {
                 private var dragging = 0
 
-                override fun mousePressed(e: MouseEvent) {
-                    if (SwingUtilities.isLeftMouseButton(e)) {
-                        val p = e.point
-                        val d1 = p.distance(x1, y1)
-                        val d2 = p.distance(x2, y2)
-                        if (d1 < 30 || d2 < 30)
-                            dragging = if (d1 < d2) 1 else 2
-                    }
+                override fun onStartDragging(startPointer: Point): Boolean {
+                    val d1 = startPointer.distance(x1, y1)
+                    val d2 = startPointer.distance(x2, y2)
+                    if (d1 < 30 || d2 < 30)
+                        dragging = if (d1 < d2) 1 else 2
+                    return true
                 }
 
-                override fun mouseReleased(e: MouseEvent) {
-                    if (SwingUtilities.isLeftMouseButton(e))
-                        dragging = 0
-                }
-
-                override fun mouseDragged(e: MouseEvent) {
-                    if (dragging != 0) {
-                        val ctrlX = ((e.x - marginLeft) / (canvasWidth - 1).toDouble()).coerceIn(0.0, 1.0)
-                        val ctrlY = (1 - (e.y - marginTop) / (canvasHeight - 1).toDouble()).coerceIn(0.0, 1.0)
-                        when (dragging) {
-                            1 -> value = value.copy(ctrl1X = ctrlX, ctrl1Y = ctrlY)
-                            2 -> value = value.copy(ctrl2X = ctrlX, ctrl2Y = ctrlY)
-                        }
+                override fun onDrag(startPointer: Point, currentPointer: Point, modifiersEx: Int) {
+                    val ctrlX = ((currentPointer.x - marginLeft) / (canvasWidth - 1).toDouble()).coerceIn(0.0, 1.0)
+                    val ctrlY = (1 - (currentPointer.y - marginTop) / (canvasHeight - 1).toDouble()).coerceIn(0.0, 1.0)
+                    when (dragging) {
+                        1 -> value = value.copy(ctrl1X = ctrlX, ctrl1Y = ctrlY)
+                        2 -> value = value.copy(ctrl2X = ctrlX, ctrl2Y = ctrlY)
                     }
                 }
-            }
-            addMouseListener(mouseListener)
-            addMouseMotionListener(mouseListener)
+            })
         }
 
         override fun paintComponent(g: Graphics) {

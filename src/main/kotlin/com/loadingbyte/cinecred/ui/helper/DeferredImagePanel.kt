@@ -14,8 +14,6 @@ import net.miginfocom.swing.MigLayout
 import java.awt.*
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent.*
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
@@ -194,34 +192,22 @@ class DeferredImagePanel(
         }
 
         // When the user clicks and drags inside the canvas, move the viewport center.
-        val canvasDragListener = object : MouseAdapter() {
-            private var startPoint: Point? = null
+        canvas.addHighFrequencyDragListener(object : HighFrequencyDragListener {
             private var startViewportCenterX = 0.0
             private var startViewportCenterY = 0.0
 
-            override fun mousePressed(e: MouseEvent) {
-                if (SwingUtilities.isLeftMouseButton(e)) {
-                    startPoint = e.point
-                    startViewportCenterX = viewportCenterX
-                    startViewportCenterY = viewportCenterY
-                }
+            override fun onStartDragging(startPointer: Point): Boolean {
+                startViewportCenterX = viewportCenterX
+                startViewportCenterY = viewportCenterY
+                return true
             }
 
-            override fun mouseReleased(e: MouseEvent) {
-                if (SwingUtilities.isLeftMouseButton(e))
-                    startPoint = null
+            override fun onDrag(startPointer: Point, currentPointer: Point, modifiersEx: Int) {
+                viewportCenterX = startViewportCenterX + (startPointer.x - currentPointer.x) / imageScaling
+                viewportCenterY = startViewportCenterY + (startPointer.y - currentPointer.y) / imageScaling
+                canvas.repaint()
             }
-
-            override fun mouseDragged(e: MouseEvent) {
-                startPoint?.let { s ->
-                    viewportCenterX = startViewportCenterX + (s.x - e.x) / imageScaling
-                    viewportCenterY = startViewportCenterY + (s.y - e.y) / imageScaling
-                    canvas.repaint()
-                }
-            }
-        }
-        canvas.addMouseListener(canvasDragListener)
-        canvas.addMouseMotionListener(canvasDragListener)
+        })
     }
 
     // In image coordinates:

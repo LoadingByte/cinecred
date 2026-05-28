@@ -9,6 +9,7 @@ import net.miginfocom.swing.MigLayout
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.Graphics
+import java.awt.Point
 import java.awt.event.*
 import java.awt.event.KeyEvent.*
 import java.awt.image.BufferedImage
@@ -425,27 +426,27 @@ class ColorPicker(allowNonSRGB: Boolean, private val allowAlpha: Boolean) : JCom
         init {
             addMouseListener(object : MouseAdapter() {
                 override fun mousePressed(e: MouseEvent) {
-                    onClickOrDrag(e)
+                    onClickOrDrag(e.point)
                 }
 
                 override fun mouseReleased(e: MouseEvent) {
                     onMouseReleased()
                 }
             })
-            addMouseMotionListener(object : MouseMotionAdapter() {
-                override fun mouseDragged(e: MouseEvent) {
-                    onClickOrDrag(e)
+            addHighFrequencyDragListener(object : HighFrequencyDragListener {
+                override fun onDrag(startPointer: Point, currentPointer: Point, modifiersEx: Int) {
+                    onClickOrDrag(currentPointer)
                 }
             })
         }
 
-        private fun onClickOrDrag(e: MouseEvent) {
+        private fun onClickOrDrag(pointer: Point) {
             val insets = this.insets
             val h = height - insets.top - insets.bottom
-            setSelectionY(h, (e.y - insets.top).coerceIn(0, h - 1))
+            setSelectionY(h, (pointer.y - insets.top).coerceIn(0, h - 1))
             if (plane) {
                 val w = width - insets.left - insets.right
-                setSelectionX(w, (e.x - insets.left).coerceIn(0, w - 1))
+                setSelectionX(w, (pointer.x - insets.left).coerceIn(0, w - 1))
             }
             onSelectionChange()
         }

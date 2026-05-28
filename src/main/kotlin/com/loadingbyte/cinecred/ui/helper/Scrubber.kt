@@ -5,6 +5,7 @@ import com.loadingbyte.cinecred.common.*
 import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
+import java.awt.Point
 import java.awt.event.*
 import java.awt.event.KeyEvent.*
 import java.beans.PropertyChangeListener
@@ -65,10 +66,16 @@ class Scrubber<T : Any>(scheme: Scheme<T>) : JFormattedTextField() {
             }
         })
 
-        val mouseListener = MouseListener(this)
-        addMouseListener(mouseListener)
-        addMouseMotionListener(mouseListener)
+        // Make the scrubber gain focus when the user clicks, but not when he presses and drags.
         isRequestFocusEnabled = false
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                if (SwingUtilities.isLeftMouseButton(e))
+                    requestFocusInWindow()
+            }
+        })
+
+        addHighFrequencyDragListener(DragListener(this))
 
         addKeyListener(object : KeyAdapter() {
             override fun keyPressed(e: KeyEvent) {
@@ -400,37 +407,23 @@ class Scrubber<T : Any>(scheme: Scheme<T>) : JFormattedTextField() {
     }
 
 
-    private class MouseListener<T : Any>(private val scrubber: Scrubber<T>) : MouseAdapter() {
+    private class DragListener<T : Any>(private val scrubber: Scrubber<T>) : HighFrequencyDragListener {
 
-        private var startX = 0
         private var startValue: T? = null
         private var glassPane: Component? = null
 
-        override fun mouseClicked(e: MouseEvent) {
-            if (SwingUtilities.isLeftMouseButton(e))
-                scrubber.requestFocusInWindow()
-        }
-
-        override fun mousePressed(e: MouseEvent) {
-            if (SwingUtilities.isLeftMouseButton(e)) {
-                startX = e.x
+        override fun onStartDragging(startPointer: Point): Boolean {
+            if (!scrubber.hasFocus()) {
                 startValue = scrubber.value
-            }
+                updateGlassPane(true)
+                return true
+            } else
+                return false
         }
 
-        override fun mouseReleased(e: MouseEvent) {
-            if (SwingUtilities.isLeftMouseButton(e)) {
-                startValue = null
-                updateGlassPane(false)
-            }
-        }
-
-        override fun mouseDragged(e: MouseEvent) {
-            startValue?.let { startValue ->
-                if (glassPane == null)
-                    updateGlassPane(true)
-                scrubber.move(startValue, e.x - startX, e.isShiftDown, e.isControlDown)
-            }
+        override fun onStopDragging() {
+            startValue = null
+            updateGlassPane(false)
         }
 
         private fun updateGlassPane(dragging: Boolean) {
@@ -440,6 +433,15 @@ class Scrubber<T : Any>(scheme: Scheme<T>) : JFormattedTextField() {
             glassPane?.isVisible = dragging
             if (!dragging)
                 glassPane = null
+        }
+
+        override fun onDrag(startPointer: Point, currentPointer: Point, modifiersEx: Int) {
+            scrubber.move(
+                startValue!!,
+                currentPointer.x - startPointer.x,
+                modifiersEx and SHIFT_DOWN_MASK != 0,
+                modifiersEx and CTRL_DOWN_MASK != 0
+            )
         }
 
     }

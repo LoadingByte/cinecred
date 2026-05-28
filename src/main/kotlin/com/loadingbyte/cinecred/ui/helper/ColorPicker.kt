@@ -3,7 +3,6 @@ package com.loadingbyte.cinecred.ui.helper
 import com.formdev.flatlaf.ui.FlatBorder
 import com.formdev.flatlaf.ui.FlatUIUtils
 import com.loadingbyte.cinecred.common.l10n
-import com.loadingbyte.cinecred.common.roundingDiv
 import com.loadingbyte.cinecred.imaging.Color4f
 import com.loadingbyte.cinecred.imaging.ColorSpace
 import net.miginfocom.swing.MigLayout
@@ -349,38 +348,44 @@ class ColorPicker(allowNonSRGB: Boolean, private val allowAlpha: Boolean) : JCom
 
     private inner class BriDiagram : Diagram(plane = false) {
 
+        private var lim = 1f
+        private var disableLimitChange = false
+
         override fun renderImage(w: Int, h: Int, out: IntArray) {
+            if (!disableLimitChange)
+                lim = if (hdr && bri > 1f) 2f * bri else if (hdr) 2f else 1f
             val cs = colorSpace
             val hdr = hdr
-            val dyn = !allowDrag()
             val hue = hue
             val sat = sat
-            val userBri = bri
             var prevBri = 0f
             var i = 0
             for (y in 0..<h) {
-                val bri = (1f - y / (h - 1).toFloat()) * if (dyn) 2f * userBri else if (hdr) 2f else 1f
-                var c = Color4f.fromHSB(hue, sat, bri, cs).toSRGBPacked()
-                if (hdr && bri <= 1f && prevBri > 1f)
-                    c = c xor 0xFFFFFF
+                val bri = (1f - y / (h - 1).toFloat()) * lim
+                val c = Color4f.fromHSB(hue, sat, bri, cs).toSRGBPacked()
                 out.fill(c, i, i + w)
+                if (hdr && bri <= 1f && prevBri > 1f)
+                    for (x in 0..<w)
+                        out[i + x] = if (x % 4 < 2) 0 else 0xFFFFFF
                 prevBri = bri
                 i += w
             }
         }
 
-        override fun allowDrag() = !hdr || bri <= 1f
+        override fun getSelectionY(h: Int) = ((1f - bri / lim) * (h - 1)).roundToInt()
+        override fun setSelectionY(h: Int, selY: Int) = withoutOnChange { bri = (1f - selY / (h - 1).toFloat()) * lim }
 
-        override fun getSelectionY(h: Int) =
-            if (!allowDrag()) roundingDiv(h - 1, 2)
-            else ((1f - bri * if (hdr) 0.5f else 1f) * (h - 1)).roundToInt()
+        override fun onSelectionChange() {
+            // While the user drags, keep the limit constant.
+            disableLimitChange = true
+            onBriChange()
+            disableLimitChange = false
+        }
 
-        override fun setSelectionY(h: Int, selY: Int) =
-            withoutOnChange {
-                bri = (1f - selY / (h - 1).toFloat()) * if (!allowDrag()) 2f * bri else if (hdr) 2f else 1f
-            }
-
-        override fun onSelectionChange() = onBriChange()
+        override fun onMouseReleased() {
+            // Once the user stops dragging, update the limit and repaint the diagram.
+            rerenderImageAndRepaint()
+        }
 
     }
 
@@ -422,11 +427,14 @@ class ColorPicker(allowNonSRGB: Boolean, private val allowAlpha: Boolean) : JCom
                 override fun mousePressed(e: MouseEvent) {
                     onClickOrDrag(e)
                 }
+
+                override fun mouseReleased(e: MouseEvent) {
+                    onMouseReleased()
+                }
             })
             addMouseMotionListener(object : MouseMotionAdapter() {
                 override fun mouseDragged(e: MouseEvent) {
-                    if (allowDrag())
-                        onClickOrDrag(e)
+                    onClickOrDrag(e)
                 }
             })
         }
@@ -444,7 +452,7 @@ class ColorPicker(allowNonSRGB: Boolean, private val allowAlpha: Boolean) : JCom
 
         fun rerenderImageAndRepaint() {
             image = null
-            repaint()
+            paintImmediately(0, 0, width, height)
         }
 
         override fun paintComponent(g: Graphics) {
@@ -482,12 +490,12 @@ class ColorPicker(allowNonSRGB: Boolean, private val allowAlpha: Boolean) : JCom
         }
 
         protected abstract fun renderImage(w: Int, h: Int, out: IntArray)
-        protected open fun allowDrag(): Boolean = true
         protected open fun getSelectionX(w: Int): Int = throw UnsupportedOperationException()
         protected open fun setSelectionX(w: Int, selX: Int): Unit = throw UnsupportedOperationException()
         protected abstract fun getSelectionY(h: Int): Int
         protected abstract fun setSelectionY(h: Int, selY: Int)
         protected abstract fun onSelectionChange()
+        protected open fun onMouseReleased() {}
 
     }
 
